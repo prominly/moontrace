@@ -1,6 +1,6 @@
 # 🌚 moontrace
 
-Experimental ray tracer written in [Luau](https://github.com/luau-lang/luau) with [Lute](https://github.com/luau-lang/lute). Early stage.
+Experimental ray tracer written in [Luau](https://luau.org/) with [Lute](https://lute.luau.org/). Early stage.
 
 ![moontrace](docs/images/showcase.png)
 

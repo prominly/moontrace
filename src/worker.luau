@@ -1,0 +1,59 @@
+local Camera = require("./render/camera")
+local BVH = require("./core/bvh")
+local integrator = require("./render/integrator")
+local background = require("./render/background")
+local ppm = require("./render/ppm")
+local scenes = require("./scenes")
+
+local worker = {}
+
+function worker.renderTile(args: {
+	width: number,
+	samples: number,
+	depth: number,
+	yStart: number,
+	yEnd: number,
+	sceneSeed: number,
+	rngSeed: number,
+	aspectRatio: number,
+	scene: string,
+}): string
+	local builder = scenes[args.scene]
+	if not builder then
+		error("unknown scene: " .. args.scene)
+	end
+
+	math.randomseed(args.sceneSeed)
+	local scene = builder()
+	local bvh = BVH.build(scene.objects)
+
+	math.randomseed(args.rngSeed)
+
+	local camera = Camera.new(scene.camera, {
+		aspectRatio = args.aspectRatio,
+		imageWidth = args.width,
+		samplesPerPixel = args.samples,
+		maxDepth = args.depth,
+	})
+
+	local index = 1
+	local chunks = {}
+	local sky = scene.sky or background.gradientSky
+
+	for j = args.yStart, args.yEnd - 1 do
+		for i = 0, args.width - 1 do
+			local pixelColor = vector.zero
+
+			for _ = 1, args.samples do
+				pixelColor += integrator.rayColor(camera:getRay(i, j), args.depth, bvh, sky)
+			end
+
+			chunks[index] = ppm.formatPixel(camera.pixelSamplesScale * pixelColor)
+			index += 1
+		end
+	end
+
+	return table.concat(chunks)
+end
+
+return worker

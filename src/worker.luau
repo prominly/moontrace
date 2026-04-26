@@ -45,7 +45,7 @@ function worker.renderTile(args: {
 			local pixelColor = vector.zero
 
 			for _ = 1, args.samples do
-				pixelColor += integrator.rayColor(camera:getRay(i, j), args.depth, bvh, sky)
+				pixelColor += integrator.rayColor(camera:getRay(i, j), args.depth, bvh, sky, scene.lights)
 			end
 
 			chunks[index] = ppm.formatPixel(camera.pixelSamplesScale * pixelColor)

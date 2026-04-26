@@ -4,6 +4,7 @@ local AABB = require("./aabb")
 
 export type Material = {
 	scatter: (any, rIn: Ray.Ray, rec: HitRecord) -> (vector?, Ray.Ray?),
+	evalDirect: ((any, rIn: Ray.Ray, rec: HitRecord, wi: Vec3.Vec3) -> vector)?,
 }
 
 export type HitRecord = {
@@ -11,7 +12,7 @@ export type HitRecord = {
 	normal: Vec3.Vec3,
 	t: number,
 	frontFace: boolean,
-	mat: Material,
+	material: Material,
 }
 
 export type Hittable = {
@@ -26,7 +27,7 @@ function hittable.makeHitRecord(
 	t: number,
 	p: Vec3.Point3,
 	outwardNormal: Vec3.Vec3,
-	mat: Material
+	material: Material
 ): HitRecord
 	local frontFace = Vec3.dot(r.direction, outwardNormal) < 0
 
@@ -35,7 +36,7 @@ function hittable.makeHitRecord(
 		p = p,
 		normal = if frontFace then outwardNormal else -outwardNormal,
 		frontFace = frontFace,
-		mat = mat,
+		material = material,
 	}
 end
 

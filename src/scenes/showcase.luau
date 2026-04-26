@@ -2,6 +2,7 @@ local Vec3 = require("../math/vec3")
 local Sphere = require("../shapes/sphere")
 local HittableList = require("../core/hittable_list")
 local material = require("../materials")
+local lights = require("../lights")
 local background = require("../render/background")
 local types = require("./types")
 
@@ -139,6 +140,9 @@ function showcase.build(): types.Scene
 			focusDist = 14.0,
 		},
 		sky = background.sunset,
+		lights = {
+			lights.Point.new(Vec3.new(-12, 14, 6), Vec3.new(1.0, 0.55, 0.30), 700),
+		},
 	}
 end
 

@@ -1,5 +1,6 @@
 local Ray = require("../core/ray")
 local hittable = require("../core/hittable")
+local lights = require("../lights")
 local backgroundMod = require("./background")
 
 local integrator = {}
@@ -8,8 +9,10 @@ function integrator.rayColor(
 	r: Ray.Ray,
 	maxDepth: number,
 	world: hittable.Hittable,
-	background: backgroundMod.Background
+	background: backgroundMod.Background,
+	sceneLights: { lights.Light }?
 ): vector
+	local accum = vector.zero
 	local attenuation = vector.one
 	local ray = r
 
@@ -17,20 +20,32 @@ function integrator.rayColor(
 		local rec = world:hit(ray, 0.001, math.huge)
 
 		if not rec then
-			return attenuation * background(ray)
+			return accum + attenuation * background(ray)
 		end
 
-		local att, scattered = rec.mat:scatter(ray, rec)
+		if sceneLights and rec.material.evalDirect then
+			for _, light in sceneLights do
+				local s = light:sample(rec.p)
+				local shadow = Ray.new(rec.p, s.dir)
+
+				if not world:hit(shadow, 0.001, s.distance - 0.001) then
+					local f = (rec.material :: any):evalDirect(ray, rec, s.dir)
+					accum += attenuation * f * s.emitted / s.probability
+				end
+			end
+		end
+
+		local att, scattered = rec.material:scatter(ray, rec)
 
 		if not att or not scattered then
-			return vector.zero
+			return accum
 		end
 
-		attenuation = attenuation * att
+		attenuation *= att
 		ray = scattered
 	end
 
-	return vector.zero
+	return accum
 end
 
 return integrator

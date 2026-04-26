@@ -6,10 +6,13 @@ local AABB = require("../core/aabb")
 local Sphere = {}
 Sphere.__index = Sphere
 
-export type Sphere = typeof(setmetatable({} :: { center: Vec3.Point3, radius: number, mat: hittable.Material }, Sphere))
+export type Sphere = typeof(setmetatable(
+	{} :: { center: Vec3.Point3, radius: number, material: hittable.Material },
+	Sphere
+))
 
-function Sphere.new(center: Vec3.Point3, radius: number, mat: hittable.Material): hittable.Hittable
-	return setmetatable({ center = center, radius = math.max(0, radius), mat = mat }, Sphere) :: any
+function Sphere.new(center: Vec3.Point3, radius: number, material: hittable.Material): hittable.Hittable
+	return setmetatable({ center = center, radius = math.max(0, radius), material = material }, Sphere) :: any
 end
 
 function Sphere.hit(self: Sphere, r: Ray.Ray, tMin: number, tMax: number): hittable.HitRecord?
@@ -37,7 +40,7 @@ function Sphere.hit(self: Sphere, r: Ray.Ray, tMin: number, tMax: number): hitta
 	local p = Ray.at(r, root)
 	local outwardNormal = (p - self.center) / self.radius
 
-	return hittable.makeHitRecord(r, root, p, outwardNormal, self.mat)
+	return hittable.makeHitRecord(r, root, p, outwardNormal, self.material)
 end
 
 function Sphere.boundingBox(self: Sphere): AABB.AABB

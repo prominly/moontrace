@@ -21,4 +21,10 @@ function Lambertian.scatter(self: Lambertian, _rIn: Ray.Ray, rec: hittable.HitRe
 	return self.albedo, Ray.new(rec.p, scatterDir)
 end
 
+function Lambertian.evalDirect(self: Lambertian, _rIn: Ray.Ray, rec: hittable.HitRecord, wi: Vec3.Vec3): vector
+	local cosTheta = math.max(0, vector.dot(rec.normal, wi))
+
+	return self.albedo * cosTheta / math.pi
+end
+
 return Lambertian

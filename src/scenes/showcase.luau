@@ -142,6 +142,7 @@ function showcase.build(): types.Scene
 		sky = background.sunset,
 		lights = {
 			lights.Point.new(Vec3.new(-12, 14, 6), Vec3.new(1.0, 0.55, 0.30), 700),
+			lights.Directional.new(Vec3.new(-0.6, 0.35, 0.5), Vec3.new(1.0, 0.55, 0.30), 1.8),
 		},
 	}
 end

@@ -10,6 +10,7 @@ local DEPTH = 50
 local SCENE_SEED = 1
 local SCENE = "showcase"
 local THREADS = system.threadCount()
+local TILE_HEIGHT = 8
 
 -- spawn
 local tSpawnStart = os.clock()
@@ -22,32 +23,42 @@ local tSpawn = os.clock() - tSpawnStart
 -- render
 local tRenderStart = os.clock()
 
-local bandHeight = math.ceil(HEIGHT / THREADS)
-local results = {}
-local done = 0
+local tiles = {}
+for yStart = 0, HEIGHT - 1, TILE_HEIGHT do
+	tiles[#tiles + 1] = { yStart = yStart, yEnd = math.min(yStart + TILE_HEIGHT, HEIGHT) }
+end
+local tileCount = #tiles
 
-for i = 1, THREADS do
-	local index = i
-	local yStart = (index - 1) * bandHeight
-	local yEnd = math.min(index * bandHeight, HEIGHT)
+local results = {}
+local nextTile = 1
+local tilesDone = 0
+
+for w = 1, THREADS do
+	local workerIndex = w
 	task.spawn(function()
-		local _, tile = workers[index].renderTile({
-			width = WIDTH,
-			samples = SAMPLES,
-			depth = DEPTH,
-			yStart = yStart,
-			yEnd = yEnd,
-			sceneSeed = SCENE_SEED,
-			rngSeed = 100 + index,
-			aspectRatio = 16 / 9,
-			scene = SCENE,
-		})
-		results[index] = tile
-		done += 1
+		while nextTile <= tileCount do
+			local currentTile = nextTile
+			nextTile += 1
+
+			local tile = tiles[currentTile]
+			local _, output = workers[workerIndex].renderTile({
+				width = WIDTH,
+				samples = SAMPLES,
+				depth = DEPTH,
+				yStart = tile.yStart,
+				yEnd = tile.yEnd,
+				sceneSeed = SCENE_SEED,
+				rngSeed = currentTile + 100,
+				aspectRatio = 16 / 9,
+				scene = SCENE,
+			})
+			results[currentTile] = output
+			tilesDone += 1
+		end
 	end)
 end
 
-while done < THREADS do
+while tilesDone < tileCount do
 	task.wait()
 end
 

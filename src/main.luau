@@ -1,5 +1,6 @@
 local task = require("@std/task")
 local vm = require("@lute/vm")
+local system = require("@lute/system")
 local ppm = require("./render/ppm")
 
 local WIDTH = 1200
@@ -8,7 +9,7 @@ local SAMPLES = 4
 local DEPTH = 50
 local SCENE_SEED = 1
 local SCENE = "showcase"
-local THREADS = 8
+local THREADS = system.threadCount()
 
 -- spawn
 local tSpawnStart = os.clock()

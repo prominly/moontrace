@@ -1,11 +1,17 @@
 local Camera = require("./render/camera")
 local BVH = require("./core/bvh")
+local hittable = require("./core/hittable")
 local integrator = require("./render/integrator")
 local background = require("./render/background")
 local ppm = require("./render/ppm")
 local scenes = require("./scenes")
+local types = require("./scenes/types")
 
 local worker = {}
+
+local cachedKey: string? = nil
+local cachedScene: types.Scene? = nil
+local cachedBvh: hittable.Hittable? = nil
 
 function worker.renderTile(args: {
 	width: number,
@@ -23,9 +29,16 @@ function worker.renderTile(args: {
 		error("unknown scene: " .. args.scene)
 	end
 
-	math.randomseed(args.sceneSeed)
-	local scene = builder()
-	local bvh = BVH.build(scene.objects)
+	local key = args.scene .. ":" .. args.sceneSeed
+	if cachedKey ~= key then
+		math.randomseed(args.sceneSeed)
+		cachedScene = builder()
+		cachedBvh = BVH.build(cachedScene.objects)
+		cachedKey = key
+	end
+
+	local scene = cachedScene :: types.Scene
+	local bvh = cachedBvh :: hittable.Hittable
 
 	math.randomseed(args.rngSeed)
 

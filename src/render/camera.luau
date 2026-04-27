@@ -11,6 +11,8 @@ export type SceneConfig = {
 	vup: Vec3.Vec3,
 	defocusAngle: number,
 	focusDist: number,
+	time0: number?,
+	time1: number?,
 }
 
 export type RenderConfig = {
@@ -33,6 +35,8 @@ export type Camera = typeof(setmetatable(
 		vup: Vec3.Vec3,
 		defocusAngle: number,
 		focusDist: number,
+		time0: number,
+		time1: number,
 
 		-- derived
 		imageHeight: number,
@@ -85,6 +89,8 @@ function Camera.new(scene: SceneConfig, render: RenderConfig): Camera
 		vup = scene.vup,
 		defocusAngle = scene.defocusAngle,
 		focusDist = scene.focusDist,
+		time0 = scene.time0 or 0,
+		time1 = scene.time1 or 0,
 		aspectRatio = render.aspectRatio,
 		imageWidth = render.imageWidth,
 		samplesPerPixel = render.samplesPerPixel,
@@ -121,8 +127,9 @@ function Camera.getRay(self: Camera, i: number, j: number): Ray.Ray
 	local offset = Camera.sampleSquare()
 	local pixelSample = self.pixel00Loc + ((i + offset.x) * self.pixelDeltaU) + ((j + offset.y) * self.pixelDeltaV)
 	local origin = if self.defocusAngle <= 0 then self.center else self:defocusDiskSample()
+	local time = if self.time1 > self.time0 then self.time0 + math.random() * (self.time1 - self.time0) else self.time0
 
-	return Ray.new(origin, pixelSample - origin)
+	return Ray.new(origin, pixelSample - origin, time)
 end
 
 return Camera

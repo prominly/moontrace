@@ -31,7 +31,7 @@ function Dielectric.scatter(self: Dielectric, rIn: Ray.Ray, rec: hittable.HitRec
 		direction = Vec3.refract(unitDir, rec.normal, ri)
 	end
 
-	return vector.one, Ray.new(rec.p, direction)
+	return vector.one, Ray.new(rec.p, direction, rIn.time)
 end
 
 return Dielectric

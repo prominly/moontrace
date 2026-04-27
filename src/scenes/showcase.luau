@@ -120,10 +120,26 @@ function showcase.build(): types.Scene
 	world:add(Sphere.new(Vec3.new(-5.5, 5.0, 3.5), 0.38, material.Lambertian.new(Vec3.new(0.20, 0.55, 0.60))))
 
 	-- airborne cluster above the main sphere
-	world:add(Sphere.new(Vec3.new(-1.5, 9.5, -1.0), 0.50, material.Dielectric.new(1.33)))
-	world:add(Sphere.new(Vec3.new(1.2, 10.2, 0.8), 0.40, material.Metal.new(Vec3.new(0.90, 0.75, 0.45), 0.02)))
-	world:add(Sphere.new(Vec3.new(2.8, 8.8, -1.8), 0.35, material.Dielectric.new(1.5)))
-	world:add(Sphere.new(Vec3.new(-0.5, 11.5, 0.8), 0.35, material.Lambertian.new(Vec3.new(0.70, 0.30, 0.50))))
+	world:add(
+		Sphere.newMoving(Vec3.new(-1.5, 9.5, -1.0), Vec3.new(-1.3, 9.9, -0.8), 0.50, material.Dielectric.new(1.33))
+	)
+	world:add(
+		Sphere.newMoving(
+			Vec3.new(1.2, 10.2, 0.8),
+			Vec3.new(1.0, 10.5, 0.6),
+			0.40,
+			material.Metal.new(Vec3.new(0.90, 0.75, 0.45), 0.02)
+		)
+	)
+	world:add(Sphere.newMoving(Vec3.new(2.8, 8.8, -1.8), Vec3.new(3.0, 9.1, -2.0), 0.35, material.Dielectric.new(1.5)))
+	world:add(
+		Sphere.newMoving(
+			Vec3.new(-0.5, 11.5, 0.8),
+			Vec3.new(-0.7, 11.8, 1.0),
+			0.35,
+			material.Lambertian.new(Vec3.new(0.70, 0.30, 0.50))
+		)
+	)
 
 	-- lone high spheres
 	world:add(Sphere.new(Vec3.new(-6.5, 12.0, -4.5), 0.55, material.Metal.new(Vec3.new(0.88, 0.88, 0.92), 0.0)))
@@ -138,6 +154,8 @@ function showcase.build(): types.Scene
 			vup = Vec3.new(0, 1, 0),
 			defocusAngle = 0.0,
 			focusDist = 14.0,
+			time0 = 0,
+			time1 = 1,
 		},
 		sky = background.sunset,
 		lights = {

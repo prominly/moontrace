@@ -11,14 +11,14 @@ function Lambertian.new(albedo: Vec3.Vec3): hittable.Material
 	return setmetatable({ albedo = albedo }, Lambertian) :: any
 end
 
-function Lambertian.scatter(self: Lambertian, _rIn: Ray.Ray, rec: hittable.HitRecord): (vector?, Ray.Ray?)
+function Lambertian.scatter(self: Lambertian, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?, Ray.Ray?)
 	local scatterDir = rec.normal + Vec3.randomUnitVector()
 
 	if Vec3.nearZero(scatterDir) then
 		scatterDir = rec.normal
 	end
 
-	return self.albedo, Ray.new(rec.p, scatterDir)
+	return self.albedo, Ray.new(rec.p, scatterDir, rIn.time)
 end
 
 function Lambertian.evalDirect(self: Lambertian, _rIn: Ray.Ray, rec: hittable.HitRecord, wi: Vec3.Vec3): vector

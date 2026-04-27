@@ -26,7 +26,7 @@ function integrator.rayColor(
 		if sceneLights and rec.material.evalDirect then
 			for _, light in sceneLights do
 				local s = light:sample(rec.p)
-				local shadow = Ray.new(rec.p, s.dir)
+				local shadow = Ray.new(rec.p, s.dir, ray.time)
 
 				if not world:hit(shadow, 0.001, s.distance - 0.001) then
 					local f = (rec.material :: any):evalDirect(ray, rec, s.dir)

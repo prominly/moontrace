@@ -15,7 +15,7 @@ function Metal.scatter(self: Metal, rIn: Ray.Ray, rec: hittable.HitRecord): (vec
 	local reflected = Vec3.reflect(Vec3.unitVector(rIn.direction), rec.normal)
 	reflected = reflected + self.fuzz * Vec3.randomUnitVector()
 
-	local scattered = Ray.new(rec.p, reflected)
+	local scattered = Ray.new(rec.p, reflected, rIn.time)
 
 	if Vec3.dot(scattered.direction, rec.normal) > 0 then
 		return self.albedo, scattered

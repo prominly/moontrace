@@ -7,6 +7,8 @@ BVH.__index = BVH
 
 export type BVH = typeof(setmetatable({} :: { left: hittable.Hittable, right: hittable.Hittable, box: AABB.AABB }, BVH))
 
+type Entry = { obj: hittable.Hittable, box: AABB.AABB }
+
 local function longestAxis(box: AABB.AABB): number
 	local ex = box.max.x - box.min.x
 	local ey = box.max.y - box.min.y
@@ -25,55 +27,65 @@ end
 
 local function compareByAxis(axis: number)
 	if axis == 0 then
-		return function(a: hittable.Hittable, b: hittable.Hittable)
-			return a:boundingBox().min.x < b:boundingBox().min.x
+		return function(a: Entry, b: Entry)
+			return a.box.min.x < b.box.min.x
 		end
 	elseif axis == 1 then
-		return function(a: hittable.Hittable, b: hittable.Hittable)
-			return a:boundingBox().min.y < b:boundingBox().min.y
+		return function(a: Entry, b: Entry)
+			return a.box.min.y < b.box.min.y
 		end
 	else
-		return function(a: hittable.Hittable, b: hittable.Hittable)
-			return a:boundingBox().min.z < b:boundingBox().min.z
+		return function(a: Entry, b: Entry)
+			return a.box.min.z < b.box.min.z
 		end
 	end
 end
 
-function BVH.build(objects: { hittable.Hittable }): hittable.Hittable
-	local n = #objects
+local function buildEntries(entries: { Entry }): hittable.Hittable
+	local n = #entries
 
 	if n == 1 then
-		return objects[1]
+		return entries[1].obj
 	end
 
-	local box = objects[1]:boundingBox()
+	local box = entries[1].box
 	for i = 2, n do
-		box = AABB.surrounding(box, objects[i]:boundingBox())
+		box = AABB.surrounding(box, entries[i].box)
 	end
 
 	if n == 2 then
-		return setmetatable({ left = objects[1], right = objects[2], box = box }, BVH) :: any
+		return setmetatable({ left = entries[1].obj, right = entries[2].obj, box = box }, BVH) :: any
 	end
 
-	table.sort(objects, compareByAxis(longestAxis(box)))
+	table.sort(entries, compareByAxis(longestAxis(box)))
 
 	local mid = math.floor(n / 2)
-	local leftObjs: { hittable.Hittable } = {}
+	local leftEntries: { Entry } = {}
 
 	for i = 1, mid do
-		leftObjs[i] = objects[i]
+		leftEntries[i] = entries[i]
 	end
 
-	local rightObjs: { hittable.Hittable } = {}
+	local rightEntries: { Entry } = {}
 	for i = mid + 1, n do
-		rightObjs[i - mid] = objects[i]
+		rightEntries[i - mid] = entries[i]
 	end
 
 	return setmetatable({
-		left = BVH.build(leftObjs),
-		right = BVH.build(rightObjs),
+		left = buildEntries(leftEntries),
+		right = buildEntries(rightEntries),
 		box = box,
 	}, BVH) :: any
+end
+
+function BVH.build(objects: { hittable.Hittable }): hittable.Hittable
+	local entries: { Entry } = {}
+
+	for i, obj in objects do
+		entries[i] = { obj = obj, box = obj:boundingBox() }
+	end
+
+	return buildEntries(entries)
 end
 
 function BVH.hit(self: BVH, r: Ray.Ray, tMin: number, tMax: number): hittable.HitRecord?

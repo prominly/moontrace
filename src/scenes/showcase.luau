@@ -2,6 +2,7 @@ local Vec3 = require("../math/vec3")
 local Sphere = require("../shapes/sphere")
 local HittableList = require("../core/hittable_list")
 local material = require("../materials")
+local textures = require("../textures")
 local lights = require("../lights")
 local background = require("../render/background")
 local types = require("./types")
@@ -36,9 +37,25 @@ function showcase.build(): types.Scene
 	-- distant objects on the horizon
 	world:add(Sphere.new(Vec3.new(-30, 0, -22), 8.5, material.Lambertian.new(Vec3.new(0.10, 0.08, 0.18))))
 	world:add(Sphere.new(Vec3.new(28, 0, -38), 12.0, material.Lambertian.new(Vec3.new(0.08, 0.07, 0.15))))
-	world:add(Sphere.new(Vec3.new(-15, 0, -45), 10.5, material.Lambertian.new(Vec3.new(0.09, 0.08, 0.17))))
+	world:add(
+		Sphere.new(
+			Vec3.new(-15, 0, -45),
+			10.5,
+			material.Lambertian.new(
+				textures.loadOrDefault("assets/textures/earth_texture.ppm", Vec3.new(0.09, 0.08, 0.17))
+			)
+		)
+	)
 	world:add(Sphere.new(Vec3.new(45, 0, -20), 9.0, material.Lambertian.new(Vec3.new(0.11, 0.09, 0.18))))
-	world:add(Sphere.new(Vec3.new(-55, 0, -8), 13.0, material.Lambertian.new(Vec3.new(0.07, 0.06, 0.13))))
+	world:add(
+		Sphere.new(
+			Vec3.new(-55, 0, -8),
+			13.0,
+			material.Lambertian.new(
+				textures.loadOrDefault("assets/textures/moon_texture.ppm", Vec3.new(0.07, 0.06, 0.13))
+			)
+		)
+	)
 	world:add(Sphere.new(Vec3.new(62, 0, -55), 15.0, material.Lambertian.new(Vec3.new(0.05, 0.05, 0.12))))
 	world:add(Sphere.new(Vec3.new(8, 0, -60), 11.0, material.Lambertian.new(Vec3.new(0.08, 0.08, 0.16))))
 

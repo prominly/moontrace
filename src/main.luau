@@ -1,6 +1,7 @@
 local task = require("@std/task")
 local vm = require("@lute/vm")
 local system = require("@lute/system")
+local fs = require("@std/fs")
 local ppm = require("./render/ppm")
 
 local WIDTH = 1200
@@ -12,11 +13,31 @@ local SCENE = "showcase"
 local THREADS = system.threadCount()
 local TILE_HEIGHT = 8
 
+local TEXTURE_PATHS = {
+	"assets/textures/moon_texture.ppm",
+	"assets/textures/earth_texture.ppm",
+}
+
 -- spawn
 local tSpawnStart = os.clock()
+
+local loaded: { { path: string, data: string } } = {}
+for _, path in TEXTURE_PATHS do
+	if fs.exists(path) then
+		local h = fs.open(path, "r")
+		loaded[#loaded + 1] = { path = path, data = fs.read(h) }
+		fs.close(h)
+	else
+		print("[WARNING]: " .. path .. " not found; falling back to solid color")
+	end
+end
+
 local workers = {}
 for i = 1, THREADS do
 	workers[i] = vm.create("./worker")
+	for _, t in loaded do
+		workers[i].preloadTexture(t.path, t.data)
+	end
 end
 local tSpawn = os.clock() - tSpawnStart
 

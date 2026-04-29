@@ -11,6 +11,8 @@ export type HitRecord = {
 	p: Vec3.Point3,
 	normal: Vec3.Vec3,
 	t: number,
+	u: number,
+	v: number,
 	frontFace: boolean,
 	material: Material,
 }
@@ -27,7 +29,9 @@ function hittable.makeHitRecord(
 	t: number,
 	p: Vec3.Point3,
 	outwardNormal: Vec3.Vec3,
-	material: Material
+	material: Material,
+	u: number,
+	v: number
 ): HitRecord
 	local frontFace = Vec3.dot(r.direction, outwardNormal) < 0
 
@@ -37,6 +41,8 @@ function hittable.makeHitRecord(
 		normal = if frontFace then outwardNormal else -outwardNormal,
 		frontFace = frontFace,
 		material = material,
+		u = u,
+		v = v,
 	}
 end
 

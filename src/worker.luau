@@ -6,12 +6,17 @@ local background = require("./render/background")
 local ppm = require("./render/ppm")
 local scenes = require("./scenes")
 local types = require("./scenes/types")
+local textures = require("./textures")
 
 local worker = {}
 
 local cachedKey: string? = nil
 local cachedScene: types.Scene? = nil
 local cachedBvh: hittable.Hittable? = nil
+
+function worker.preloadTexture(path: string, data: string)
+	textures.Image.preload(path, data)
+end
 
 function worker.renderTile(args: {
 	width: number,
@@ -33,7 +38,7 @@ function worker.renderTile(args: {
 	if cachedKey ~= key then
 		math.randomseed(args.sceneSeed)
 		cachedScene = builder()
-		cachedBvh = BVH.build(cachedScene.objects)
+		cachedBvh = BVH.build((cachedScene :: types.Scene).objects)
 		cachedKey = key
 	end
 

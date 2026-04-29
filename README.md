@@ -27,5 +27,16 @@ lute run src/main.luau
 
 ## References
 
+#### Resources
+
+Ray Tracing:
 - [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html)
+- [Ray Tracing: The Next Week](https://raytracing.github.io/books/RayTracingTheNextWeek.html)
+- [Ray Tracing: The Rest of Your Life](https://raytracing.github.io/books/RayTracingTheRestOfYourLife.html)
+
+#### Assets
+
+Textures:
+- [earth_texture.jpg](https://science.nasa.gov/earth/earth-observatory/the-blue-marble-true-color-global-imagery-at-1km-resolution/)
+- [moon_texture.jpg](https://svs.gsfc.nasa.gov/4720)
 

@@ -62,7 +62,7 @@ for w = 1, THREADS do
 			nextTile += 1
 
 			local tile = tiles[currentTile]
-			local _, output = workers[workerIndex].renderTile({
+			results[currentTile] = workers[workerIndex].renderTile({
 				width = WIDTH,
 				samples = SAMPLES,
 				depth = DEPTH,
@@ -73,7 +73,6 @@ for w = 1, THREADS do
 				aspectRatio = 16 / 9,
 				scene = SCENE,
 			})
-			results[currentTile] = output
 			tilesDone += 1
 		end
 	end)

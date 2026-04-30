@@ -35,7 +35,7 @@ function showcase.build(): types.Scene
 	world:add(Sphere.new(Vec3.new(0, -1000, 0), 1000, material.Metal.new(Vec3.new(0.22, 0.26, 0.32), 0.02)))
 
 	-- distant objects on the horizon
-	world:add(Sphere.new(Vec3.new(-30, 0, -22), 8.5, material.Lambertian.new(Vec3.new(0.10, 0.08, 0.18))))
+	world:add(Sphere.new(Vec3.new(-30, 0, -22), 8.5, material.Lambertian.new(textures.Noise.new(64))))
 	world:add(Sphere.new(Vec3.new(28, 0, -38), 12.0, material.Lambertian.new(Vec3.new(0.08, 0.07, 0.15))))
 	world:add(
 		Sphere.new(

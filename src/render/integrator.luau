@@ -23,6 +23,10 @@ function integrator.rayColor(
 			return accum + attenuation * background(ray)
 		end
 
+		if rec.material.emitted then
+			accum += attenuation * (rec.material :: any):emitted(rec)
+		end
+
 		if sceneLights and rec.material.evalDirect then
 			for _, light in sceneLights do
 				local s = light:sample(rec.p)

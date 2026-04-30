@@ -129,7 +129,7 @@ function showcase.build(): types.Scene
 	end
 
 	-- satellites drifting around the main sphere
-	world:add(Sphere.new(Vec3.new(4.5, 5.8, 1.5), 0.40, material.Dielectric.new(1.5)))
+	world:add(Sphere.new(Vec3.new(4.5, 5.8, 1.5), 0.40, material.DiffuseLight.new(Vec3.new(8, 4, 2))))
 	world:add(Sphere.new(Vec3.new(-4.8, 4.5, -3.0), 0.45, material.Metal.new(Vec3.new(0.88, 0.85, 0.82), 0.0)))
 	world:add(Sphere.new(Vec3.new(4.2, 7.6, -2.5), 0.35, material.Dielectric.new(1.8)))
 	world:add(Sphere.new(Vec3.new(-3.8, 7.2, 3.0), 0.35, material.Metal.new(Vec3.new(0.78, 0.55, 0.35), 0.05)))

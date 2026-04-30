@@ -5,6 +5,7 @@ local AABB = require("./aabb")
 export type Material = {
 	scatter: (any, rIn: Ray.Ray, rec: HitRecord) -> (vector?, Ray.Ray?),
 	evalDirect: ((any, rIn: Ray.Ray, rec: HitRecord, wi: Vec3.Vec3) -> vector)?,
+	emitted: ((any, rec: HitRecord) -> vector)?,
 }
 
 export type HitRecord = {

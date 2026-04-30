@@ -2,6 +2,7 @@ local Vec3 = require("../math/vec3")
 local Sphere = require("../shapes/sphere")
 local Box = require("../shapes/box")
 local transforms = require("../transforms")
+local volumes = require("../volumes")
 local HittableList = require("../core/hittable_list")
 local material = require("../materials")
 local textures = require("../textures")
@@ -166,12 +167,16 @@ function showcase.build(): types.Scene
 
 	-- boxes
 	world:add(
-		transforms.Translation.new(
-			transforms.RotationY.new(
-				Box.new(vector.zero, Vec3.new(1.0, 1.0, 1.0), material.Metal.new(Vec3.new(1.0, 1.0, 1.0), 0.01)),
-				-28
+		volumes.ConstantMedium.new(
+			transforms.Translation.new(
+				transforms.RotationY.new(
+					Box.new(vector.zero, Vec3.new(1.0, 1.0, 1.0), material.Metal.new(Vec3.new(1.0, 1.0, 1.0), 0.01)),
+					-28
+				),
+				Vec3.new(0, -0.03, 7.1)
 			),
-			Vec3.new(0, -0.03, 7.1)
+			1.0,
+			Vec3.new(1.0, 1.0, 1.0)
 		)
 	)
 	world:add(

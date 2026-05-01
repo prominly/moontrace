@@ -65,7 +65,7 @@ function Sphere.hit(self: Sphere, r: Ray.Ray, tMin: number, tMax: number): hitta
 	local p = Ray.at(r, root)
 	local outwardNormal = (p - center) / self.radius
 
-	local theta = math.acos(-outwardNormal.y)
+	local theta = math.acos(math.clamp(-outwardNormal.y, -1, 1))
 	local phi = math.atan2(-outwardNormal.z, outwardNormal.x) + math.pi
 	local u = phi / (2 * math.pi)
 	local v = theta / math.pi

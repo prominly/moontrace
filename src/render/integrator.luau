@@ -1,6 +1,7 @@
 local Ray = require("../core/ray")
 local hittable = require("../core/hittable")
 local lights = require("../lights")
+local probabilityMod = require("./probability")
 local backgroundMod = require("./background")
 
 local integrator = {}
@@ -10,7 +11,8 @@ function integrator.rayColor(
 	maxDepth: number,
 	world: hittable.Hittable,
 	background: backgroundMod.Background,
-	sceneLights: { lights.Light }?
+	sceneLights: { lights.Light }?,
+	samplers: hittable.Hittable?
 ): vector
 	local accum = vector.zero
 	local attenuation = vector.one
@@ -45,7 +47,26 @@ function integrator.rayColor(
 			return accum
 		end
 
-		attenuation *= att
+		if samplers and rec.material.probability then
+			local matProbability = (rec.material :: any):probability(ray, rec)
+			local lightProbability = probabilityMod.Hittable.new(samplers, rec.p)
+			local mixed = probabilityMod.Mixture.new(lightProbability, matProbability)
+
+			local newDir = mixed:generate()
+			scattered = Ray.new(rec.p, newDir, ray.time)
+
+			local samplingDensity = mixed:value(newDir)
+			local brdfDensity = matProbability:value(newDir)
+
+			if samplingDensity <= 0 or brdfDensity <= 0 then
+				return accum
+			end
+
+			attenuation *= att * brdfDensity / samplingDensity
+		else
+			attenuation *= att
+		end
+
 		ray = scattered
 	end
 

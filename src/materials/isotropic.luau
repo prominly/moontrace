@@ -1,6 +1,7 @@
 local Vec3 = require("../math/vec3")
 local Ray = require("../core/ray")
 local hittable = require("../core/hittable")
+local probability = require("../render/probability")
 local textures = require("../textures")
 local textureTypes = require("../textures/types")
 
@@ -13,16 +14,20 @@ function Isotropic.new(albedo: vector | textureTypes.Texture): hittable.Material
 	local tex: textureTypes.Texture
 
 	if typeof(albedo) == "vector" then
-		tex = textures.Solid.new(albedo :: vector)
+		texture = textures.Solid.new(albedo :: vector)
 	else
-		tex = albedo :: textureTypes.Texture
+		texture = albedo :: textureTypes.Texture
 	end
 
-	return setmetatable({ texture = tex }, Isotropic) :: any
+	return setmetatable({ texture = texture }, Isotropic) :: any
 end
 
 function Isotropic.scatter(self: Isotropic, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?, Ray.Ray?)
 	return self.texture:value(rec.u, rec.v, rec.p), Ray.new(rec.p, Vec3.randomUnitVector(), rIn.time)
+end
+
+function Isotropic.probability(_self: Isotropic, _rIn: Ray.Ray, _rec: hittable.HitRecord)
+	return probability.Sphere.new()
 end
 
 return Isotropic

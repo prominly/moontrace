@@ -41,4 +41,22 @@ function HittableList.boundingBox(self: HittableList): AABB.AABB
 	return box
 end
 
+function HittableList.probabilityValue(self: HittableList, origin: vector, direction: vector): number
+	local n = #self.objects
+	local weight = 1 / n
+	local sum = 0
+
+	for _, obj in self.objects do
+		sum += weight * (obj :: any):probabilityValue(origin, direction)
+	end
+
+	return sum
+end
+
+function HittableList.random(self: HittableList, origin: vector): vector
+	local index = math.random(1, #self.objects)
+
+	return (self.objects[index] :: any):random(origin)
+end
+
 return HittableList

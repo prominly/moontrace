@@ -12,12 +12,12 @@ function DiffuseLight.new(emit: vector | textureTypes.Texture): hittable.Materia
 	local tex: textureTypes.Texture
 
 	if typeof(emit) == "vector" then
-		tex = textures.Solid.new(emit :: vector)
+		texture = textures.Solid.new(emit :: vector)
 	else
-		tex = emit :: textureTypes.Texture
+		texture = emit :: textureTypes.Texture
 	end
 
-	return setmetatable({ texture = tex }, DiffuseLight) :: any
+	return setmetatable({ texture = texture }, DiffuseLight) :: any
 end
 
 function DiffuseLight.scatter(_self: DiffuseLight, _rIn: Ray.Ray, _rec: hittable.HitRecord): (vector?, Ray.Ray?)

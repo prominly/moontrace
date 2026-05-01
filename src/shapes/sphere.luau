@@ -1,4 +1,5 @@
 local Vec3 = require("../math/vec3")
+local ONB = require("../math/onb")
 local Ray = require("../core/ray")
 local hittable = require("../core/hittable")
 local AABB = require("../core/aabb")
@@ -80,6 +81,44 @@ function Sphere.boundingBox(self: Sphere): AABB.AABB
 	local box1 = AABB.new(centerEnd - r, centerEnd + r)
 
 	return AABB.surrounding(box0, box1)
+end
+
+local function randomToSphere(radius: number, distSquared: number): vector
+	local r1 = math.random()
+	local r2 = math.random()
+	local z = 1 + r2 * (math.sqrt(1 - radius * radius / distSquared) - 1)
+	local sinTheta = math.sqrt(math.max(0, 1 - z * z))
+	local phi = 2 * math.pi * r1
+
+	return vector.create(math.cos(phi) * sinTheta, math.sin(phi) * sinTheta, z)
+end
+
+function Sphere.probabilityValue(self: Sphere, origin: Vec3.Point3, direction: Vec3.Vec3): number
+	if not self:hit(Ray.new(origin, direction, 0), 0.001, math.huge) then
+		return 0
+	end
+
+	local toCenter = self.centerStart - origin
+	local distSquared = Vec3.lengthSquared(toCenter)
+
+	if distSquared <= self.radius * self.radius then
+		return 0
+	end
+
+	local cosThetaMax = math.sqrt(1 - self.radius * self.radius / distSquared)
+
+	return 1 / (2 * math.pi * (1 - cosThetaMax))
+end
+
+function Sphere.random(self: Sphere, origin: Vec3.Point3): Vec3.Vec3
+	local toCenter = self.centerStart - origin
+	local distSquared = Vec3.lengthSquared(toCenter)
+
+	if distSquared <= self.radius * self.radius then
+		return Vec3.randomUnitVector()
+	end
+
+	return ONB.new(toCenter):transform(randomToSphere(self.radius, distSquared))
 end
 
 return Sphere

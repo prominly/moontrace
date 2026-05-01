@@ -65,4 +65,13 @@ function Vec3.randomUnitVector(): vector
 	return vector.normalize(Vec3.randomInUnitSphere())
 end
 
+function Vec3.randomCosineDirection(): vector
+	local r1 = math.random()
+	local r2 = math.random()
+	local phi = 2 * math.pi * r1
+	local sqrtR2 = math.sqrt(r2)
+
+	return vector.create(math.cos(phi) * sqrtR2, math.sin(phi) * sqrtR2, math.sqrt(1 - r2))
+end
+
 return Vec3

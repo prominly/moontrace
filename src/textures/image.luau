@@ -121,8 +121,8 @@ function Image.value(self: Image, u: number, v: number, _p: vector): vector
 		y = self.height - 1
 	end
 
-	local idx = self.dataOffset + (y * self.width + x) * 3
-	local r, g, b = string.byte(self.data, idx, idx + 2)
+	local index = self.dataOffset + (y * self.width + x) * 3
+	local r, g, b = string.byte(self.data, index, index + 2)
 
 	return vector.create(r / 255, g / 255, b / 255)
 end

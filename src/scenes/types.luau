@@ -8,6 +8,7 @@ export type Scene = {
 	camera: Camera.SceneConfig,
 	sky: background.Background?,
 	lights: { lights.Light }?,
+	samplers: hittable.Hittable?,
 }
 
 export type Builder = () -> Scene

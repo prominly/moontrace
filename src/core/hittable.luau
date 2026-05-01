@@ -4,6 +4,7 @@ local AABB = require("./aabb")
 
 export type Material = {
 	scatter: (any, rIn: Ray.Ray, rec: HitRecord) -> (vector?, Ray.Ray?),
+	probability: ((any, rIn: Ray.Ray, rec: HitRecord) -> any)?,
 	evalDirect: ((any, rIn: Ray.Ray, rec: HitRecord, wi: Vec3.Vec3) -> vector)?,
 	emitted: ((any, rec: HitRecord) -> vector)?,
 }
@@ -21,6 +22,8 @@ export type HitRecord = {
 export type Hittable = {
 	hit: (any, r: Ray.Ray, tMin: number, tMax: number) -> HitRecord?,
 	boundingBox: (any) -> AABB.AABB,
+	probabilityValue: ((any, origin: Vec3.Point3, direction: Vec3.Vec3) -> number)?,
+	random: ((any, origin: Vec3.Point3) -> Vec3.Vec3)?,
 }
 
 local hittable = {}

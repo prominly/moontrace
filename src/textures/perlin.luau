@@ -62,8 +62,8 @@ local function noise(p: vector): number
 				local iz = (fk + dk) % POINT_COUNT
 				local ww2 = if dk == 1 then ww else 1 - ww
 
-				local idx = bit32.bxor(permX[ix + 1], permY[iy + 1], permZ[iz + 1])
-				local c = randvec[idx + 1]
+				local index = bit32.bxor(permX[ix + 1], permY[iy + 1], permZ[iz + 1])
+				local c = randvec[index + 1]
 				local weightV = vector.create(u - di, v - dj, w - dk)
 
 				accum += wu * wv * ww2 * vector.dot(c, weightV)

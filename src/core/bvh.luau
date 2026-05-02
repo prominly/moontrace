@@ -19,6 +19,8 @@ export type BVH = typeof(setmetatable(
 
 type Entry = { obj: hittable.Hittable, box: AABB.AABB }
 
+local TRAVERSAL_STACK: { BVH } = table.create(64)
+
 local function surfaceArea(box: AABB.AABB): number
 	local d = box.max - box.min
 	return d.x * d.y + d.y * d.z + d.x * d.z
@@ -130,14 +132,13 @@ function BVH.build(objects: { hittable.Hittable }): hittable.Hittable
 end
 
 function BVH.hit(self: BVH, r: Ray.Ray, tMin: number, tMax: number): hittable.HitRecord?
-	-- AABB hit
 	local origin = r.origin
 	local invD = r.invDirection
 
 	local closestRec: hittable.HitRecord? = nil
 	local closestT = tMax
 
-	local stack: { BVH } = table.create(64)
+	local stack = TRAVERSAL_STACK
 	stack[1] = self
 	local top = 1
 

@@ -17,66 +17,18 @@ function AABB.surrounding(a: AABB, b: AABB): AABB
 end
 
 function AABB.hit(self: AABB, r: Ray.Ray, tMin: number, tMax: number): boolean
-	local ox, oy, oz = r.origin.x, r.origin.y, r.origin.z
-	local dx, dy, dz = r.direction.x, r.direction.y, r.direction.z
+	local invD = vector.one / r.direction
 
-	local invD = 1 / dx
-	local t0 = (self.min.x - ox) * invD
-	local t1 = (self.max.x - ox) * invD
+	local t0 = (self.min - r.origin) * invD
+	local t1 = (self.max - r.origin) * invD
 
-	if invD < 0 then
-		t0, t1 = t1, t0
-	end
+	local tNear = vector.min(t0, t1)
+	local tFar = vector.max(t0, t1)
 
-	if t0 > tMin then
-		tMin = t0
-	end
+	local tEnter = math.max(tMin, tNear.x, tNear.y, tNear.z)
+	local tExit = math.min(tMax, tFar.x, tFar.y, tFar.z)
 
-	if t1 < tMax then
-		tMax = t1
-	end
-
-	if tMax <= tMin then
-		return false
-	end
-
-	invD = 1 / dy
-	t0 = (self.min.y - oy) * invD
-	t1 = (self.max.y - oy) * invD
-
-	if invD < 0 then
-		t0, t1 = t1, t0
-	end
-
-	if t0 > tMin then
-		tMin = t0
-	end
-
-	if t1 < tMax then
-		tMax = t1
-	end
-
-	if tMax <= tMin then
-		return false
-	end
-
-	invD = 1 / dz
-	t0 = (self.min.z - oz) * invD
-	t1 = (self.max.z - oz) * invD
-
-	if invD < 0 then
-		t0, t1 = t1, t0
-	end
-
-	if t0 > tMin then
-		tMin = t0
-	end
-
-	if t1 < tMax then
-		tMax = t1
-	end
-
-	return tMax > tMin
+	return tExit > tEnter
 end
 
 return AABB

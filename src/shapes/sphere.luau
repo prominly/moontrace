@@ -12,16 +12,19 @@ export type Sphere = typeof(setmetatable(
 		centerStart: Vec3.Point3,
 		centerVec: Vec3.Vec3,
 		radius: number,
+		radiusSquared: number,
 		material: hittable.Material,
 	},
 	Sphere
 ))
 
 function Sphere.new(center: Vec3.Point3, radius: number, material: hittable.Material): hittable.Hittable
+	local r = math.max(0, radius)
 	return setmetatable({
 		centerStart = center,
 		centerVec = vector.zero,
-		radius = math.max(0, radius),
+		radius = r,
+		radiusSquared = r * r,
 		material = material,
 	}, Sphere) :: any
 end
@@ -32,10 +35,12 @@ function Sphere.newMoving(
 	radius: number,
 	material: hittable.Material
 ): hittable.Hittable
+	local r = math.max(0, radius)
 	return setmetatable({
 		centerStart = center0,
 		centerVec = center1 - center0,
-		radius = math.max(0, radius),
+		radius = r,
+		radiusSquared = r * r,
 		material = material,
 	}, Sphere) :: any
 end
@@ -45,7 +50,7 @@ function Sphere.hit(self: Sphere, r: Ray.Ray, tMin: number, tMax: number): hitta
 	local oc = center - r.origin
 	local a = Vec3.lengthSquared(r.direction)
 	local h = Vec3.dot(r.direction, oc)
-	local c = Vec3.lengthSquared(oc) - self.radius * self.radius
+	local c = Vec3.lengthSquared(oc) - self.radiusSquared
 	local discriminant = h * h - a * c
 
 	if discriminant < 0 then
@@ -101,11 +106,11 @@ function Sphere.probabilityValue(self: Sphere, origin: Vec3.Point3, direction: V
 	local toCenter = self.centerStart - origin
 	local distSquared = Vec3.lengthSquared(toCenter)
 
-	if distSquared <= self.radius * self.radius then
+	if distSquared <= self.radiusSquared then
 		return 0
 	end
 
-	local cosThetaMax = math.sqrt(1 - self.radius * self.radius / distSquared)
+	local cosThetaMax = math.sqrt(1 - self.radiusSquared / distSquared)
 
 	return 1 / (2 * math.pi * (1 - cosThetaMax))
 end
@@ -114,7 +119,7 @@ function Sphere.random(self: Sphere, origin: Vec3.Point3): Vec3.Vec3
 	local toCenter = self.centerStart - origin
 	local distSquared = Vec3.lengthSquared(toCenter)
 
-	if distSquared <= self.radius * self.radius then
+	if distSquared <= self.radiusSquared then
 		return Vec3.randomUnitVector()
 	end
 

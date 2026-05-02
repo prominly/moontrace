@@ -1,12 +1,13 @@
 local task = require("@std/task")
 local vm = require("@lute/vm")
 local system = require("@lute/system")
+local process = require("@std/process")
 local fs = require("@std/fs")
 local ppm = require("./render/ppm")
 
 local WIDTH = 1200
 local HEIGHT = math.max(1, math.floor(WIDTH / (16 / 9)))
-local SAMPLES = 4
+local SAMPLES = 1
 local DEPTH = 50
 local SCENE_SEED = 1
 local SCENE = "showcase"
@@ -30,6 +31,11 @@ for _, path in TEXTURE_PATHS do
 	else
 		print("[WARNING]: " .. path .. " not found; falling back to solid color")
 	end
+end
+
+local samplesPerPixel = tonumber(process.args[2])
+if not samplesPerPixel or samplesPerPixel < 1 or samplesPerPixel % 1 ~= 0 then
+	samplesPerPixel = SAMPLES
 end
 
 local workers = {}
@@ -64,7 +70,7 @@ for w = 1, THREADS do
 			local tile = tiles[currentTile]
 			results[currentTile] = workers[workerIndex].renderTile({
 				width = WIDTH,
-				samples = SAMPLES,
+				samples = samplesPerPixel,
 				depth = DEPTH,
 				yStart = tile.yStart,
 				yEnd = tile.yEnd,

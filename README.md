@@ -14,14 +14,14 @@ cd moontrace
 
 This project requires the `Lute` runtime. You can find the local setup instructions on this [Page](https://lute.luau.org/guide/installation.html).
 
-Before rendering the scene, you may want to adjust the sample count. This can be done by changing the `SAMPLES` variable at the top of `src/main.luau`.
+Before rendering the scene, you may want to adjust the sample count. This can be done by passing it as a positional numeric argument when launching the program.
 
 Performance depends on your hardware, but 10 samples per pixel shouldn't take more than a minute at the moment.
 > _the render above took 500 samples per pixel._
 
 Launch:
 ```sh
-lute run src/main.luau
+lute run src/main.luau 10
 ```
 > Note: the final image will be in `.ppm` format.
 

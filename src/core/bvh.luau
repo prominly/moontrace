@@ -12,6 +12,7 @@ export type BVH = typeof(setmetatable(
 		box: AABB.AABB,
 		boxMin: vector,
 		boxMax: vector,
+		_isBVH: boolean,
 	},
 	BVH
 ))
@@ -58,6 +59,7 @@ local function buildEntries(entries: { Entry }): hittable.Hittable
 			box = box,
 			boxMin = box.min,
 			boxMax = box.max,
+			_isBVH = true,
 		}, BVH) :: any
 	end
 
@@ -113,6 +115,7 @@ local function buildEntries(entries: { Entry }): hittable.Hittable
 		box = box,
 		boxMin = box.min,
 		boxMax = box.max,
+		_isBVH = true,
 	}, BVH) :: any
 end
 
@@ -129,23 +132,55 @@ end
 function BVH.hit(self: BVH, r: Ray.Ray, tMin: number, tMax: number): hittable.HitRecord?
 	-- AABB hit
 	local origin = r.origin
-
 	local invD = r.invDirection
-	local t0 = (self.boxMin - origin) * invD
-	local t1 = (self.boxMax - origin) * invD
 
-	local tNear = vector.min(t0, t1)
-	local tFar = vector.max(t0, t1)
+	local closestRec: hittable.HitRecord? = nil
+	local closestT = tMax
 
-	if math.min(tMax, tFar.x, tFar.y, tFar.z) <= math.max(tMin, tNear.x, tNear.y, tNear.z) then
-		return nil
+	local stack: { BVH } = table.create(64)
+	stack[1] = self
+	local top = 1
+
+	while top > 0 do
+		local node = stack[top]
+		top -= 1
+
+		local t0 = (node.boxMin - origin) * invD
+		local t1 = (node.boxMax - origin) * invD
+		local tNear = vector.min(t0, t1)
+		local tFar = vector.max(t0, t1)
+
+		if math.min(closestT, tFar.x, tFar.y, tFar.z) <= math.max(tMin, tNear.x, tNear.y, tNear.z) then
+			continue
+		end
+
+		-- push right first so left pops first (matches recursive left-to-right order)
+		local right = node.right
+		if (right :: any)._isBVH then
+			top += 1
+			stack[top] = right :: any
+		else
+			local rec = (right :: any):hit(r, tMin, closestT)
+			if rec then
+				closestRec = rec
+				closestT = rec.t
+			end
+		end
+
+		local left = node.left
+		if (left :: any)._isBVH then
+			top += 1
+			stack[top] = left :: any
+		else
+			local rec = (left :: any):hit(r, tMin, closestT)
+			if rec then
+				closestRec = rec
+				closestT = rec.t
+			end
+		end
 	end
 
-	local leftRec = self.left:hit(r, tMin, tMax)
-	local newMax = if leftRec then leftRec.t else tMax
-	local rightRec = self.right:hit(r, tMin, newMax)
-
-	return rightRec or leftRec
+	return closestRec
 end
 
 function BVH.boundingBox(self: BVH): AABB.AABB

@@ -5,7 +5,16 @@ local hittable = require("./hittable")
 local BVH = {}
 BVH.__index = BVH
 
-export type BVH = typeof(setmetatable({} :: { left: hittable.Hittable, right: hittable.Hittable, box: AABB.AABB }, BVH))
+export type BVH = typeof(setmetatable(
+	{} :: {
+		left: hittable.Hittable,
+		right: hittable.Hittable,
+		box: AABB.AABB,
+		boxMin: vector,
+		boxMax: vector,
+	},
+	BVH
+))
 
 type Entry = { obj: hittable.Hittable, box: AABB.AABB }
 
@@ -54,7 +63,13 @@ local function buildEntries(entries: { Entry }): hittable.Hittable
 	end
 
 	if n == 2 then
-		return setmetatable({ left = entries[1].obj, right = entries[2].obj, box = box }, BVH) :: any
+		return setmetatable({
+			left = entries[1].obj,
+			right = entries[2].obj,
+			box = box,
+			boxMin = box.min,
+			boxMax = box.max,
+		}, BVH) :: any
 	end
 
 	table.sort(entries, compareByAxis(longestAxis(box)))
@@ -75,6 +90,8 @@ local function buildEntries(entries: { Entry }): hittable.Hittable
 		left = buildEntries(leftEntries),
 		right = buildEntries(rightEntries),
 		box = box,
+		boxMin = box.min,
+		boxMax = box.max,
 	}, BVH) :: any
 end
 
@@ -89,11 +106,12 @@ function BVH.build(objects: { hittable.Hittable }): hittable.Hittable
 end
 
 function BVH.hit(self: BVH, r: Ray.Ray, tMin: number, tMax: number): hittable.HitRecord?
-	local box = self.box
+	-- AABB hit
+	local origin = r.origin
 
-	local invD = vector.one / r.direction
-	local t0 = (box.min - r.origin) * invD
-	local t1 = (box.max - r.origin) * invD
+	local invD = r.invDirection
+	local t0 = (self.boxMin - origin) * invD
+	local t1 = (self.boxMax - origin) * invD
 
 	local tNear = vector.min(t0, t1)
 	local tFar = vector.max(t0, t1)

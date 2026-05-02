@@ -29,7 +29,7 @@ function integrator.rayColor(
 			accum += attenuation * (rec.material :: any):emitted(rec)
 		end
 
-		if sceneLights and rec.material.evalDirect then
+		if sceneLights and rec.material.evalDirect and math.max(attenuation.x, attenuation.y, attenuation.z) > 0.01 then
 			for _, light in sceneLights do
 				local s = light:sample(rec.p)
 				local shadow = Ray.new(rec.p, s.dir, ray.time)

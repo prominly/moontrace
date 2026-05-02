@@ -33,6 +33,13 @@ General:
 - [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html)
 - [Ray Tracing: The Next Week](https://raytracing.github.io/books/RayTracingTheNextWeek.html)
 - [Ray Tracing: The Rest of Your Life](https://raytracing.github.io/books/RayTracingTheRestOfYourLife.html)
+- [Physically Based Rendering](https://pbr-book.org/4ed/contents)
+
+Bounding Volume Hierarchies:
+- [Physically Based Rendering: Bounding Volume Hierarchies](https://pbr-book.org/4ed/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies)
+
+Monte Carlo:
+- [Physically Based Rendering: Russian Roulette](https://pbr-book.org/4ed/Monte_Carlo_Integration/Improving_Efficiency#RussianRoulette)
 
 Textures:
 - [Building Up Perlin Noise](http://eastfarthing.com/blog/2015-04-21-noise/)

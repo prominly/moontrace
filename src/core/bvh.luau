@@ -18,20 +18,9 @@ export type BVH = typeof(setmetatable(
 
 type Entry = { obj: hittable.Hittable, box: AABB.AABB }
 
-local function longestAxis(box: AABB.AABB): number
-	local ex = box.max.x - box.min.x
-	local ey = box.max.y - box.min.y
-	local ez = box.max.z - box.min.z
-
-	if ex > ey and ex > ez then
-		return 0
-	end
-
-	if ey >= ez then
-		return 1
-	end
-
-	return 2
+local function surfaceArea(box: AABB.AABB): number
+	local d = box.max - box.min
+	return d.x * d.y + d.y * d.z + d.x * d.z
 end
 
 local function compareByAxis(axis: number)
@@ -72,18 +61,50 @@ local function buildEntries(entries: { Entry }): hittable.Hittable
 		}, BVH) :: any
 	end
 
-	table.sort(entries, compareByAxis(longestAxis(box)))
+	-- Surface Area Heuristic
+	-- pick the (axis, split) that minimizes SA(left) * |left| + SA(right) * |right|
+	local bestCost = math.huge
+	local bestAxis = 0
+	local bestSplit = 1
 
-	local mid = math.floor(n / 2)
-	local leftEntries: { Entry } = {}
+	local leftBoxes: { AABB.AABB } = table.create(n)
+	local rightBoxes: { AABB.AABB } = table.create(n)
 
-	for i = 1, mid do
+	for axis = 0, 2 do
+		table.sort(entries, compareByAxis(axis))
+
+		leftBoxes[1] = entries[1].box
+		for i = 2, n do
+			leftBoxes[i] = AABB.surrounding(leftBoxes[i - 1], entries[i].box)
+		end
+
+		rightBoxes[n] = entries[n].box
+		for i = n - 1, 1, -1 do
+			rightBoxes[i] = AABB.surrounding(rightBoxes[i + 1], entries[i].box)
+		end
+
+		for i = 1, n - 1 do
+			local cost = surfaceArea(leftBoxes[i]) * i + surfaceArea(rightBoxes[i + 1]) * (n - i)
+			if cost < bestCost then
+				bestCost = cost
+				bestAxis = axis
+				bestSplit = i
+			end
+		end
+	end
+
+	if bestAxis ~= 2 then
+		table.sort(entries, compareByAxis(bestAxis))
+	end
+
+	local leftEntries: { Entry } = table.create(bestSplit)
+	for i = 1, bestSplit do
 		leftEntries[i] = entries[i]
 	end
 
-	local rightEntries: { Entry } = {}
-	for i = mid + 1, n do
-		rightEntries[i - mid] = entries[i]
+	local rightEntries: { Entry } = table.create(n - bestSplit)
+	for i = bestSplit + 1, n do
+		rightEntries[i - bestSplit] = entries[i]
 	end
 
 	return setmetatable({

@@ -18,7 +18,7 @@ function integrator.rayColor(
 	local attenuation = vector.one
 	local ray = r
 
-	for _ = 1, maxDepth do
+	for depth = 1, maxDepth do
 		local rec = world:hit(ray, 0.001, math.huge)
 
 		if not rec then
@@ -65,6 +65,14 @@ function integrator.rayColor(
 			attenuation *= att * brdfDensity / samplingDensity
 		else
 			attenuation *= att
+		end
+
+		if depth >= 8 then
+			local survive = math.min(0.95, math.max(attenuation.x, attenuation.y, attenuation.z))
+			if math.random() > survive then
+				return accum
+			end
+			attenuation /= survive
 		end
 
 		ray = scattered

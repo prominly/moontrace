@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local Camera = require("./render/camera")
 local BVH = require("./core/bvh")
 local hittable = require("./core/hittable")

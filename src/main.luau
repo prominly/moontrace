@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local task = require("@std/task")
 local vm = require("@lute/vm")
 local system = require("@lute/system")

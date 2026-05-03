@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local gamma = {}
 
 local function linearToGamma(x: number): number

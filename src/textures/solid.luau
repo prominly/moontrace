@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local types = require("./types")
 
 local Solid = {}

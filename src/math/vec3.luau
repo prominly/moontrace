@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local Vec3 = {}
 
 export type Vec3 = vector

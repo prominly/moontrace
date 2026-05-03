@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local Ray = require("./ray")
 local AABB = require("./aabb")
 local hittable = require("./hittable")

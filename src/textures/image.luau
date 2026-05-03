@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local fs = require("@std/fs")
 local types = require("./types")
 

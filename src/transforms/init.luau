@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local Translation = require("@self/translation")
 local RotationY = require("@self/rotation_y")
 

@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local Camera = require("../render/camera")
 local background = require("../render/background")
 local hittable = require("../core/hittable")

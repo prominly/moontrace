@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local Quad = require("./quad")
 local HittableList = require("../core/hittable_list")
 local hittable = require("../core/hittable")

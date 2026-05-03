@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local ONB = {}
 ONB.__index = ONB
 

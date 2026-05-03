@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local Solid = require("@self/solid")
 local Image = require("@self/image")
 local Noise = require("@self/perlin")

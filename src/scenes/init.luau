@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local types = require("@self/types")
 local default = require("@self/default")
 local showcase = require("@self/showcase")

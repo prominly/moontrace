@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local Point = require("@self/point")
 local Directional = require("@self/directional")
 

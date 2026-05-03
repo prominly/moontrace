@@ -1,3 +1,7 @@
+--!strict
+--!optimize 2
+--!native
+
 local Vec3 = require("../math/vec3")
 local Sphere = require("../shapes/sphere")
 local Box = require("../shapes/box")

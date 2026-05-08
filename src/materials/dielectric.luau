@@ -42,4 +42,20 @@ function Dielectric.surfaceAlbedo(_self: Dielectric, _rec: hittable.HitRecord): 
 	return vector.one
 end
 
+function Dielectric.specularBounce(self: Dielectric, rIn: Ray.Ray, rec: hittable.HitRecord): Ray.Ray?
+	local ri = if rec.frontFace then 1.0 / self.refractionIndex else self.refractionIndex
+	local unitDir = Vec3.unitVector(rIn.direction)
+	local cosTheta = math.min(Vec3.dot(-unitDir, rec.normal), 1.0)
+	local sinTheta = math.sqrt(1.0 - cosTheta * cosTheta)
+
+	local direction
+	if ri * sinTheta > 1.0 then
+		direction = Vec3.reflect(unitDir, rec.normal)
+	else
+		direction = Vec3.refract(unitDir, rec.normal, ri)
+	end
+
+	return Ray.new(rec.p, direction, rIn.time)
+end
+
 return Dielectric

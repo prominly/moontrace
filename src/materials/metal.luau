@@ -32,4 +32,14 @@ function Metal.surfaceAlbedo(self: Metal, _rec: hittable.HitRecord): vector
 	return self.albedo
 end
 
+function Metal.specularBounce(self: Metal, rIn: Ray.Ray, rec: hittable.HitRecord): Ray.Ray?
+	if self.fuzz > 0.1 then
+		return nil
+	end
+
+	local reflected = Vec3.reflect(Vec3.unitVector(rIn.direction), rec.normal)
+
+	return Ray.new(rec.p, reflected, rIn.time)
+end
+
 return Metal

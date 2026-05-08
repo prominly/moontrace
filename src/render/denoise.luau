@@ -5,9 +5,15 @@ local denoise = {}
 
 local KERNEL = { 1 / 16, 4 / 16, 6 / 16, 4 / 16, 1 / 16 }
 local ITERATIONS = 5
-local SIGMA_C_SQ = 0.09 * 0.09 -- 0.45 * 0.45
-local SIGMA_N_SQ = 0.07 * 0.07 -- 0.35 * 0.35
-local SIGMA_A_SQ = 0.04 * 0.04 -- 0.2 * 0.2
+local SIGMA_C_SQ = 0.225 * 0.225 -- 0.45 * 0.45
+local SIGMA_N_SQ = 0.175 * 0.175 -- 0.35 * 0.35
+local SIGMA_A_SQ = 0.100 * 0.100 -- 0.2 * 0.2
+
+local ALBEDO_EPS = 0.01
+
+local function clampedAlbedo(al: vector): vector
+	return vector.create(math.max(al.x, ALBEDO_EPS), math.max(al.y, ALBEDO_EPS), math.max(al.z, ALBEDO_EPS))
+end
 
 local function clamp(v: number, lo: number, hi: number): number
 	if v < lo then
@@ -83,7 +89,7 @@ function denoise.atrous(
 	local b = table.create(pixelCount)
 
 	for i = 1, pixelCount do
-		a[i] = color[i]
+		a[i] = color[i] / clampedAlbedo(albedo[i])
 	end
 
 	local input, output = a, b
@@ -92,6 +98,10 @@ function denoise.atrous(
 
 		pass(input, albedo, normal, output, width, height, stepSize)
 		input, output = output, input
+	end
+
+	for i = 1, pixelCount do
+		input[i] = input[i] * clampedAlbedo(albedo[i])
 	end
 
 	return input

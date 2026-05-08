@@ -11,6 +11,7 @@ export type Material = {
 	probability: ((any, rIn: Ray.Ray, rec: HitRecord) -> any)?,
 	evalDirect: ((any, rIn: Ray.Ray, rec: HitRecord, wi: Vec3.Vec3) -> vector)?,
 	emitted: ((any, rec: HitRecord) -> vector)?,
+	surfaceAlbedo: ((any, rec: HitRecord) -> vector)?,
 }
 
 export type HitRecord = {

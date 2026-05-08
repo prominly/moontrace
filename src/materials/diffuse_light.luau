@@ -36,4 +36,8 @@ function DiffuseLight.emitted(self: DiffuseLight, rec: hittable.HitRecord): vect
 	return self.texture:value(rec.u, rec.v, rec.p)
 end
 
+function DiffuseLight.surfaceAlbedo(_self: DiffuseLight, _rec: hittable.HitRecord): vector
+	return vector.zero
+end
+
 return DiffuseLight

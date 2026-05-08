@@ -38,4 +38,8 @@ function Dielectric.scatter(self: Dielectric, rIn: Ray.Ray, rec: hittable.HitRec
 	return vector.one, Ray.new(rec.p, direction, rIn.time)
 end
 
+function Dielectric.surfaceAlbedo(_self: Dielectric, _rec: hittable.HitRecord): vector
+	return vector.one
+end
+
 return Dielectric

@@ -16,11 +16,12 @@ function ppm.formatPixel(pixel: vector): string
 	)
 end
 
-function ppm.writePpm(path: string, width: number, height: number, tiles: { string })
-	local chunks = { string.format("P3\n%d %d\n255\n", width, height) }
+function ppm.writeLinearPpm(path: string, width: number, height: number, pixels: { vector })
+	local chunks = table.create(#pixels + 1)
+	chunks[1] = string.format("P3\n%d %d\n255\n", width, height)
 
-	for i = 1, #tiles do
-		chunks[#chunks + 1] = tiles[i]
+	for i = 1, #pixels do
+		chunks[i + 1] = ppm.formatPixel(pixels[i])
 	end
 
 	local file = fs.open(path, "w+")

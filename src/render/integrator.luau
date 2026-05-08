@@ -85,4 +85,20 @@ function integrator.rayColor(
 	return accum
 end
 
+function integrator.firstHitGBuffer(r: Ray.Ray, world: hittable.Hittable): (vector, vector)
+	local rec = world:hit(r, 0.001, math.huge)
+	if not rec then
+		return vector.one, vector.zero
+	end
+
+	local material = rec.material
+	local albedo = vector.one
+
+	if material.surfaceAlbedo then
+		albedo = (material :: any):surfaceAlbedo(rec)
+	end
+
+	return albedo, rec.normal
+end
+
 return integrator

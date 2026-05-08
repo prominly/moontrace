@@ -8,6 +8,7 @@ local system = require("@lute/system")
 local process = require("@std/process")
 local fs = require("@std/fs")
 local ppm = require("./render/ppm")
+local denoise = require("./render/denoise")
 
 local WIDTH = 1200
 local HEIGHT = math.max(1, math.floor(WIDTH / (16 / 9)))
@@ -23,6 +24,20 @@ local TEXTURE_PATHS = {
 	"assets/textures/earth_texture.ppm",
 }
 
+-- args
+local samplesPerPixel = tonumber(process.args[2])
+if not samplesPerPixel or samplesPerPixel < 1 or samplesPerPixel % 1 ~= 0 then
+	samplesPerPixel = SAMPLES
+end
+
+local denoiseEnabled = false
+for _, arg in process.args do
+	if arg == "--denoise" then
+		denoiseEnabled = true
+		break
+	end
+end
+
 -- spawn
 local tSpawnStart = os.clock()
 
@@ -35,11 +50,6 @@ for _, path in TEXTURE_PATHS do
 	else
 		print("[WARNING]: " .. path .. " not found; falling back to solid color")
 	end
-end
-
-local samplesPerPixel = tonumber(process.args[2])
-if not samplesPerPixel or samplesPerPixel < 1 or samplesPerPixel % 1 ~= 0 then
-	samplesPerPixel = SAMPLES
 end
 
 local workers = {}
@@ -94,18 +104,69 @@ end
 
 local tRender = os.clock() - tRenderStart
 
+-- assembly
+local pixelCount = WIDTH * HEIGHT
+local color = table.create(pixelCount)
+local albedo = table.create(pixelCount)
+local normal = table.create(pixelCount)
+
+local cursor = 1
+for t = 1, tileCount do
+	local r = results[t]
+	local offset = 0
+	local cb = buffer.fromstring(r.color)
+	local ab = buffer.fromstring(r.albedo)
+	local nb = buffer.fromstring(r.normal)
+	local tilePixels = buffer.len(cb) // 12
+
+	for _ = 1, tilePixels do
+		color[cursor] =
+			vector.create(buffer.readf32(cb, offset), buffer.readf32(cb, offset + 4), buffer.readf32(cb, offset + 8))
+		albedo[cursor] =
+			vector.create(buffer.readf32(ab, offset), buffer.readf32(ab, offset + 4), buffer.readf32(ab, offset + 8))
+		normal[cursor] =
+			vector.create(buffer.readf32(nb, offset), buffer.readf32(nb, offset + 4), buffer.readf32(nb, offset + 8))
+
+		offset += 12
+		cursor += 1
+	end
+end
+
 -- write
 local tWriteStart = os.clock()
-ppm.writePpm("image.ppm", WIDTH, HEIGHT, results)
+ppm.writeLinearPpm("image.ppm", WIDTH, HEIGHT, color)
 local tWrite = os.clock() - tWriteStart
 
+-- denoise
+local tDenoise = 0
+if denoiseEnabled then
+	local tDenoiseStart = os.clock()
+	local denoised = denoise.atrous(color, albedo, normal, WIDTH, HEIGHT)
+	tDenoise = os.clock() - tDenoiseStart
+
+	ppm.writeLinearPpm("image_denoised.ppm", WIDTH, HEIGHT, denoised)
+end
+
 -- stats
-print(
-	string.format(
-		"spawn: %.3fs  render: %.3fs  write: %.3fs  total: %.3fs",
-		tSpawn,
-		tRender,
-		tWrite,
-		tSpawn + tRender + tWrite
+if denoiseEnabled then
+	print(
+		string.format(
+			"spawn: %.3fs  render: %.3fs  write: %.3fs  denoise: %.3fs  total: %.3fs",
+			tSpawn,
+			tRender,
+			tWrite,
+			tDenoise,
+			tSpawn + tRender + tWrite + tDenoise
+		)
 	)
-)
+else
+	print(
+		string.format(
+			"spawn: %.3fs  render: %.3fs  write: %.3fs  total: %.3fs",
+			tSpawn,
+			tRender,
+			tWrite,
+			tSpawn + tRender + tWrite
+		)
+	)
+end

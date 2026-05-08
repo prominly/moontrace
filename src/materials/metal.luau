@@ -28,4 +28,8 @@ function Metal.scatter(self: Metal, rIn: Ray.Ray, rec: hittable.HitRecord): (vec
 	return nil, nil
 end
 
+function Metal.surfaceAlbedo(self: Metal, _rec: hittable.HitRecord): vector
+	return self.albedo
+end
+
 return Metal

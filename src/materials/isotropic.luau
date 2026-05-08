@@ -34,4 +34,8 @@ function Isotropic.probability(_self: Isotropic, _rIn: Ray.Ray, _rec: hittable.H
 	return probability.Sphere.new()
 end
 
+function Isotropic.surfaceAlbedo(self: Isotropic, rec: hittable.HitRecord): vector
+	return self.texture:value(rec.u, rec.v, rec.p)
+end
+
 return Isotropic

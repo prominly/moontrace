@@ -7,7 +7,6 @@ local BVH = require("./core/bvh")
 local hittable = require("./core/hittable")
 local integrator = require("./render/integrator")
 local background = require("./render/background")
-local ppm = require("./render/ppm")
 local scenes = require("./scenes")
 local types = require("./scenes/types")
 local textures = require("./textures")
@@ -17,6 +16,12 @@ local worker = {}
 local cachedKey: string? = nil
 local cachedScene: types.Scene? = nil
 local cachedBvh: hittable.Hittable? = nil
+
+export type TileResult = {
+	color: string,
+	albedo: string,
+	normal: string,
+}
 
 function worker.preloadTexture(path: string, data: string)
 	textures.Image.preload(path, data)
@@ -32,7 +37,7 @@ function worker.renderTile(args: {
 	rngSeed: number,
 	aspectRatio: number,
 	scene: string,
-}): string
+}): TileResult
 	local builder = scenes[args.scene]
 	if not builder then
 		error("unknown scene: " .. args.scene)
@@ -58,15 +63,25 @@ function worker.renderTile(args: {
 		maxDepth = args.depth,
 	})
 
-	local index = 1
-	local chunks = {}
 	local sky = scene.sky or background.gradientSky
+	local scale = camera.pixelSamplesScale
 
+	local pixelCount = (args.yEnd - args.yStart) * args.width
+	local byteSize = pixelCount * 12
+	local colorBuf = buffer.create(byteSize)
+	local albedoBuf = buffer.create(byteSize)
+	local normalBuf = buffer.create(byteSize)
+
+	local offset = 0
 	for j = args.yStart, args.yEnd - 1 do
 		for i = 0, args.width - 1 do
 			local pixelColor = vector.zero
 
-			for _ = 1, args.samples do
+			local firstRay = camera:getRay(i, j)
+			local a, n = integrator.firstHitGBuffer(firstRay, bvh)
+			pixelColor += integrator.rayColor(firstRay, args.depth, bvh, sky, scene.lights, scene.samplers)
+
+			for _ = 2, args.samples do
 				pixelColor += integrator.rayColor(
 					camera:getRay(i, j),
 					args.depth,
@@ -77,12 +92,25 @@ function worker.renderTile(args: {
 				)
 			end
 
-			chunks[index] = ppm.formatPixel(camera.pixelSamplesScale * pixelColor)
-			index += 1
+			pixelColor *= scale
+			buffer.writef32(colorBuf, offset, pixelColor.x)
+			buffer.writef32(colorBuf, offset + 4, pixelColor.y)
+			buffer.writef32(colorBuf, offset + 8, pixelColor.z)
+			buffer.writef32(albedoBuf, offset, a.x)
+			buffer.writef32(albedoBuf, offset + 4, a.y)
+			buffer.writef32(albedoBuf, offset + 8, a.z)
+			buffer.writef32(normalBuf, offset, n.x)
+			buffer.writef32(normalBuf, offset + 4, n.y)
+			buffer.writef32(normalBuf, offset + 8, n.z)
+			offset += 12
 		end
 	end
 
-	return table.concat(chunks)
+	return {
+		color = buffer.tostring(colorBuf),
+		albedo = buffer.tostring(albedoBuf),
+		normal = buffer.tostring(normalBuf),
+	}
 end
 
 return worker

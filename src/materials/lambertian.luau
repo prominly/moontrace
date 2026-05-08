@@ -42,4 +42,8 @@ function Lambertian.evalDirect(self: Lambertian, _rIn: Ray.Ray, rec: hittable.Hi
 	return self.texture:value(rec.u, rec.v, rec.p) * cosTheta / math.pi
 end
 
+function Lambertian.surfaceAlbedo(self: Lambertian, rec: hittable.HitRecord): vector
+	return self.texture:value(rec.u, rec.v, rec.p)
+end
+
 return Lambertian

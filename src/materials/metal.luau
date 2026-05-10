@@ -19,7 +19,7 @@ function Metal.scatter(self: Metal, rIn: Ray.Ray, rec: hittable.HitRecord): (vec
 	local reflected = Vec3.reflect(Vec3.unitVector(rIn.direction), rec.normal)
 	reflected = reflected + self.fuzz * Vec3.randomUnitVector()
 
-	local scattered = Ray.new(rec.p, reflected, rIn.time)
+	local scattered = Ray.new(rec.p, reflected, rIn.time, rIn.wavelength)
 
 	if Vec3.dot(scattered.direction, rec.normal) > 0 then
 		return self.albedo, scattered
@@ -39,7 +39,7 @@ function Metal.specularBounce(self: Metal, rIn: Ray.Ray, rec: hittable.HitRecord
 
 	local reflected = Vec3.reflect(Vec3.unitVector(rIn.direction), rec.normal)
 
-	return Ray.new(rec.p, reflected, rIn.time)
+	return Ray.new(rec.p, reflected, rIn.time, rIn.wavelength)
 end
 
 return Metal

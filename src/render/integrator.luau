@@ -7,6 +7,7 @@ local hittable = require("../core/hittable")
 local lights = require("../lights")
 local probabilityMod = require("./probability")
 local backgroundMod = require("./background")
+local spectrum = require("./spectrum")
 
 local integrator = {}
 
@@ -19,7 +20,7 @@ function integrator.rayColor(
 	samplers: hittable.Hittable?
 ): vector
 	local accum = vector.zero
-	local attenuation = vector.one
+	local attenuation = if r.wavelength > 0 then spectrum.wavelengthToRgb(r.wavelength) else vector.one
 	local ray = r
 
 	for depth = 1, maxDepth do
@@ -36,7 +37,7 @@ function integrator.rayColor(
 		if sceneLights and rec.material.evalDirect and math.max(attenuation.x, attenuation.y, attenuation.z) > 0.01 then
 			for _, light in sceneLights do
 				local s = light:sample(rec.p)
-				local shadow = Ray.new(rec.p, s.dir, ray.time)
+				local shadow = Ray.new(rec.p, s.dir, ray.time, ray.wavelength)
 
 				if not world:hit(shadow, 0.001, s.distance - 0.001) then
 					local f = (rec.material :: any):evalDirect(ray, rec, s.dir)
@@ -57,7 +58,7 @@ function integrator.rayColor(
 			local mixed = probabilityMod.Mixture.new(lightProbability, matProbability)
 
 			local newDir = mixed:generate()
-			scattered = Ray.new(rec.p, newDir, ray.time)
+			scattered = Ray.new(rec.p, newDir, ray.time, ray.wavelength)
 
 			local samplingDensity = mixed:value(newDir)
 			local brdfDensity = matProbability:value(newDir)

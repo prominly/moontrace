@@ -5,14 +5,26 @@
 local Vec3 = require("../math/vec3")
 local Ray = require("../core/ray")
 local hittable = require("../core/hittable")
+local spectrum = require("../render/spectrum")
 
 local Dielectric = {}
 Dielectric.__index = Dielectric
 
-export type Dielectric = typeof(setmetatable({} :: { refractionIndex: number }, Dielectric))
+export type Dielectric = typeof(setmetatable({} :: { refractionIndex: number, dispersion: number }, Dielectric))
 
-function Dielectric.new(refractionIndex: number): hittable.Material
-	return setmetatable({ refractionIndex = refractionIndex }, Dielectric) :: any
+function Dielectric.new(refractionIndex: number, dispersion: number?): hittable.Material
+	return setmetatable({
+		refractionIndex = refractionIndex,
+		dispersion = dispersion or 0,
+	}, Dielectric) :: any
+end
+
+local function indexFor(self: Dielectric, wavelength: number): number
+	if self.dispersion ~= 0 and wavelength > 0 then
+		return spectrum.cauchyIor(wavelength, self.refractionIndex, self.dispersion)
+	end
+
+	return self.refractionIndex
 end
 
 local function reflectance(cosine: number, ri: number): number
@@ -23,7 +35,8 @@ local function reflectance(cosine: number, ri: number): number
 end
 
 function Dielectric.scatter(self: Dielectric, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?, Ray.Ray?)
-	local ri = if rec.frontFace then (1.0 / self.refractionIndex) else self.refractionIndex
+	local n = indexFor(self, rIn.wavelength)
+	local ri = if rec.frontFace then (1.0 / n) else n
 	local unitDir = Vec3.unitVector(rIn.direction)
 	local cosTheta = math.min(Vec3.dot(-unitDir, rec.normal), 1.0)
 	local sinTheta = math.sqrt(1.0 - cosTheta * cosTheta)
@@ -35,7 +48,7 @@ function Dielectric.scatter(self: Dielectric, rIn: Ray.Ray, rec: hittable.HitRec
 		direction = Vec3.refract(unitDir, rec.normal, ri)
 	end
 
-	return vector.one, Ray.new(rec.p, direction, rIn.time)
+	return vector.one, Ray.new(rec.p, direction, rIn.time, rIn.wavelength)
 end
 
 function Dielectric.surfaceAlbedo(_self: Dielectric, _rec: hittable.HitRecord): vector
@@ -43,7 +56,8 @@ function Dielectric.surfaceAlbedo(_self: Dielectric, _rec: hittable.HitRecord): 
 end
 
 function Dielectric.specularBounce(self: Dielectric, rIn: Ray.Ray, rec: hittable.HitRecord): Ray.Ray?
-	local ri = if rec.frontFace then 1.0 / self.refractionIndex else self.refractionIndex
+	local n = indexFor(self, rIn.wavelength)
+	local ri = if rec.frontFace then 1.0 / n else n
 	local unitDir = Vec3.unitVector(rIn.direction)
 	local cosTheta = math.min(Vec3.dot(-unitDir, rec.normal), 1.0)
 	local sinTheta = math.sqrt(1.0 - cosTheta * cosTheta)
@@ -55,7 +69,7 @@ function Dielectric.specularBounce(self: Dielectric, rIn: Ray.Ray, rec: hittable
 		direction = Vec3.refract(unitDir, rec.normal, ri)
 	end
 
-	return Ray.new(rec.p, direction, rIn.time)
+	return Ray.new(rec.p, direction, rIn.time, rIn.wavelength)
 end
 
 return Dielectric

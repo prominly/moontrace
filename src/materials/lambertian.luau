@@ -31,7 +31,7 @@ function Lambertian.scatter(self: Lambertian, rIn: Ray.Ray, rec: hittable.HitRec
 	local uvw = ONB.new(rec.normal)
 	local scatterDir = vector.normalize(uvw:transform(Vec3.randomCosineDirection()))
 
-	return self.texture:value(rec.u, rec.v, rec.p), Ray.new(rec.p, scatterDir, rIn.time)
+	return self.texture:value(rec.u, rec.v, rec.p), Ray.new(rec.p, scatterDir, rIn.time, rIn.wavelength)
 end
 
 function Lambertian.probability(_self: Lambertian, _rIn: Ray.Ray, rec: hittable.HitRecord)

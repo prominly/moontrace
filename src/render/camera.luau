@@ -4,6 +4,7 @@
 
 local Vec3 = require("../math/vec3")
 local Ray = require("../core/ray")
+local spectrum = require("./spectrum")
 
 local Camera = {}
 Camera.__index = Camera
@@ -17,6 +18,7 @@ export type SceneConfig = {
 	focusDist: number,
 	time0: number?,
 	time1: number?,
+	spectral: boolean?,
 }
 
 export type RenderConfig = {
@@ -41,6 +43,7 @@ export type Camera = typeof(setmetatable(
 		focusDist: number,
 		time0: number,
 		time1: number,
+		spectral: boolean,
 
 		-- derived
 		imageHeight: number,
@@ -95,6 +98,7 @@ function Camera.new(scene: SceneConfig, render: RenderConfig): Camera
 		focusDist = scene.focusDist,
 		time0 = scene.time0 or 0,
 		time1 = scene.time1 or 0,
+		spectral = scene.spectral or false,
 		aspectRatio = render.aspectRatio,
 		imageWidth = render.imageWidth,
 		samplesPerPixel = render.samplesPerPixel,
@@ -132,8 +136,9 @@ function Camera.getRay(self: Camera, i: number, j: number): Ray.Ray
 	local pixelSample = self.pixel00Loc + ((i + offset.x) * self.pixelDeltaU) + ((j + offset.y) * self.pixelDeltaV)
 	local origin = if self.defocusAngle <= 0 then self.center else self:defocusDiskSample()
 	local time = if self.time1 > self.time0 then self.time0 + math.random() * (self.time1 - self.time0) else self.time0
+	local wavelength = if self.spectral then spectrum.sampleWavelength() else 0
 
-	return Ray.new(origin, pixelSample - origin, time)
+	return Ray.new(origin, pixelSample - origin, time, wavelength)
 end
 
 return Camera

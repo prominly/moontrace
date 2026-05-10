@@ -78,7 +78,7 @@ function RotationY.hit(self: RotationY, r: Ray.Ray, tMin: number, tMax: number):
 	local origin = vector.create(c * ox - s * oz, oy, s * ox + c * oz)
 	local direction = vector.create(c * dx - s * dz, dy, s * dx + c * dz)
 
-	local rec = self.object:hit(Ray.new(origin, direction, r.time), tMin, tMax)
+	local rec = self.object:hit(Ray.new(origin, direction, r.time, r.wavelength), tMin, tMax)
 
 	if not rec then
 		return nil

@@ -25,7 +25,7 @@ function Translation.new(object: hittable.Hittable, offset: vector): hittable.Hi
 end
 
 function Translation.hit(self: Translation, r: Ray.Ray, tMin: number, tMax: number): hittable.HitRecord?
-	local moved = Ray.new(r.origin - self.offset, r.direction, r.time)
+	local moved = Ray.new(r.origin - self.offset, r.direction, r.time, r.wavelength)
 	local rec = self.object:hit(moved, tMin, tMax)
 
 	if not rec then

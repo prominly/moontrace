@@ -27,7 +27,7 @@ function Isotropic.new(albedo: vector | textureTypes.Texture): hittable.Material
 end
 
 function Isotropic.scatter(self: Isotropic, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?, Ray.Ray?)
-	return self.texture:value(rec.u, rec.v, rec.p), Ray.new(rec.p, Vec3.randomUnitVector(), rIn.time)
+	return self.texture:value(rec.u, rec.v, rec.p), Ray.new(rec.p, Vec3.randomUnitVector(), rIn.time, rIn.wavelength)
 end
 
 function Isotropic.probability(_self: Isotropic, _rIn: Ray.Ray, _rec: hittable.HitRecord)

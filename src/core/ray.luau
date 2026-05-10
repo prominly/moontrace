@@ -8,16 +8,23 @@ local Ray = {}
 Ray.__index = Ray
 
 export type Ray = typeof(setmetatable(
-	{} :: { origin: Vec3.Point3, direction: Vec3.Vec3, invDirection: Vec3.Vec3, time: number },
+	{} :: {
+		origin: Vec3.Point3,
+		direction: Vec3.Vec3,
+		invDirection: Vec3.Vec3,
+		time: number,
+		wavelength: number,
+	},
 	Ray
 ))
 
-function Ray.new(origin: Vec3.Point3, direction: Vec3.Vec3, time: number?): Ray
+function Ray.new(origin: Vec3.Point3, direction: Vec3.Vec3, time: number?, wavelength: number?): Ray
 	return setmetatable({
 		origin = origin,
 		direction = direction,
 		invDirection = vector.one / direction,
 		time = time or 0,
+		wavelength = wavelength or 0,
 	}, Ray)
 end
 

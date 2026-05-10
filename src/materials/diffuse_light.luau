@@ -13,15 +13,15 @@ DiffuseLight.__index = DiffuseLight
 export type DiffuseLight = typeof(setmetatable({} :: { texture: textureTypes.Texture }, DiffuseLight))
 
 function DiffuseLight.new(emit: vector | textureTypes.Texture): hittable.Material
-	local tex: textureTypes.Texture
+	local entity: textureTypes.Texture
 
 	if typeof(emit) == "vector" then
-		texture = textures.Solid.new(emit :: vector)
+		entity = textures.Solid.new(emit :: vector)
 	else
-		texture = emit :: textureTypes.Texture
+		entity = emit :: textureTypes.Texture
 	end
 
-	return setmetatable({ texture = texture }, DiffuseLight) :: any
+	return setmetatable({ texture = entity }, DiffuseLight) :: any
 end
 
 function DiffuseLight.scatter(_self: DiffuseLight, _rIn: Ray.Ray, _rec: hittable.HitRecord): (vector?, Ray.Ray?)

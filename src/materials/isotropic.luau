@@ -15,15 +15,15 @@ Isotropic.__index = Isotropic
 export type Isotropic = typeof(setmetatable({} :: { texture: textureTypes.Texture }, Isotropic))
 
 function Isotropic.new(albedo: vector | textureTypes.Texture): hittable.Material
-	local tex: textureTypes.Texture
+	local entity: textureTypes.Texture
 
 	if typeof(albedo) == "vector" then
-		texture = textures.Solid.new(albedo :: vector)
+		entity = textures.Solid.new(albedo :: vector)
 	else
-		texture = albedo :: textureTypes.Texture
+		entity = albedo :: textureTypes.Texture
 	end
 
-	return setmetatable({ texture = texture }, Isotropic) :: any
+	return setmetatable({ texture = entity }, Isotropic) :: any
 end
 
 function Isotropic.scatter(self: Isotropic, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?, Ray.Ray?)

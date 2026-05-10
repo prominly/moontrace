@@ -16,13 +16,15 @@ Lambertian.__index = Lambertian
 export type Lambertian = typeof(setmetatable({} :: { texture: textureTypes.Texture }, Lambertian))
 
 function Lambertian.new(albedo: vector | textureTypes.Texture): hittable.Material
-	local tex: textureTypes.Texture
+	local entity: textureTypes.Texture
+
 	if typeof(albedo) == "vector" then
-		texture = textures.Solid.new(albedo :: vector)
+		entity = textures.Solid.new(albedo :: vector)
 	else
-		texture = albedo :: textureTypes.Texture
+		entity = albedo :: textureTypes.Texture
 	end
-	return setmetatable({ texture = texture }, Lambertian) :: any
+
+	return setmetatable({ texture = entity }, Lambertian) :: any
 end
 
 function Lambertian.scatter(self: Lambertian, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?, Ray.Ray?)

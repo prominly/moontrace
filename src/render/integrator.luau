@@ -5,11 +5,145 @@
 local Ray = require("../core/ray")
 local hittable = require("../core/hittable")
 local lights = require("../lights")
-local probabilityMod = require("./probability")
 local backgroundMod = require("./background")
 local spectrum = require("./spectrum")
 
 local integrator = {}
+
+local function maxComponent(v: vector): number
+	return math.max(v.x, v.y, v.z)
+end
+
+local function powerHeuristic(pdfA: number, pdfB: number): number
+	local a2 = pdfA * pdfA
+	local b2 = pdfB * pdfB
+	local sum = a2 + b2
+
+	if sum <= 0 then
+		return 0
+	end
+
+	return a2 / sum
+end
+
+local function lightPdf(
+	sceneLights: { lights.Light }?,
+	samplers: hittable.Hittable?,
+	origin: vector,
+	direction: vector
+): number
+	local pdf = 0
+
+	if samplers and samplers.probabilityValue then
+		pdf += (samplers :: any):probabilityValue(origin, direction)
+	end
+
+	if sceneLights then
+		for _, light in sceneLights do
+			if light.probabilityValue then
+				pdf += (light :: any):probabilityValue(origin, direction)
+			end
+		end
+	end
+
+	return pdf
+end
+
+local function analyticLightHit(
+	sceneLights: { lights.Light }?,
+	origin: vector,
+	direction: vector
+): (vector, number, number)
+	if not sceneLights then
+		return vector.zero, math.huge, 0
+	end
+
+	local closestEmission = vector.zero
+	local closestDistance = math.huge
+	local closestPdf = 0
+
+	for _, light in sceneLights do
+		if light.hitEmission then
+			local emitted, distance, pdf = (light :: any):hitEmission(origin, direction)
+
+			if distance < closestDistance and maxComponent(emitted) > 0 then
+				closestEmission = emitted
+				closestDistance = distance
+				closestPdf = pdf
+			end
+		end
+	end
+
+	return closestEmission, closestDistance, closestPdf
+end
+
+local function addDirectLighting(
+	ray: Ray.Ray,
+	rec: hittable.HitRecord,
+	attenuation: vector,
+	world: hittable.Hittable,
+	sceneLights: { lights.Light }?,
+	samplers: hittable.Hittable?
+): vector
+	if not rec.material.evalDirect or not rec.material.probability or maxComponent(attenuation) <= 0.01 then
+		return vector.zero
+	end
+
+	local accum = vector.zero
+	local matProbability = (rec.material :: any):probability(ray, rec)
+
+	if sceneLights then
+		for _, light in sceneLights do
+			local sample = light:sample(rec.p)
+
+			if sample.probability <= 0 or maxComponent(sample.emitted) <= 0 then
+				continue
+			end
+
+			local shadow = Ray.new(rec.p, sample.dir, ray.time, ray.wavelength)
+
+			if world:hit(shadow, 0.001, sample.distance - 0.001) then
+				continue
+			end
+
+			local brdfDensity = matProbability:value(sample.dir)
+			if brdfDensity <= 0 then
+				continue
+			end
+
+			local weight = 1
+			if not sample.delta then
+				weight = powerHeuristic(sample.probability, brdfDensity)
+			end
+
+			local f = (rec.material :: any):evalDirect(ray, rec, sample.dir)
+			accum += attenuation * f * sample.emitted * weight / sample.probability
+		end
+	end
+
+	if samplers and samplers.random and samplers.probabilityValue then
+		local dir = (samplers :: any):random(rec.p)
+		local pdf = (samplers :: any):probabilityValue(rec.p, dir)
+
+		if pdf > 0 then
+			local shadow = Ray.new(rec.p, dir, ray.time, ray.wavelength)
+			local lightRec = world:hit(shadow, 0.001, math.huge)
+
+			if lightRec and lightRec.material.emitted then
+				local emitted = (lightRec.material :: any):emitted(lightRec)
+				local brdfDensity = matProbability:value(dir)
+
+				if brdfDensity > 0 and maxComponent(emitted) > 0 then
+					local weight = powerHeuristic(pdf, brdfDensity)
+					local f = (rec.material :: any):evalDirect(ray, rec, dir)
+					accum += attenuation * f * emitted * weight / pdf
+				end
+			end
+		end
+	end
+
+	return accum
+end
 
 function integrator.rayColor(
 	r: Ray.Ray,
@@ -20,31 +154,49 @@ function integrator.rayColor(
 	samplers: hittable.Hittable?
 ): vector
 	local accum = vector.zero
-	local attenuation = if r.wavelength > 0 then spectrum.wavelengthToRgb(r.wavelength) else vector.one
+	local attenuation = vector.one
 	local ray = r
+	local previousBsdfPdf = 0
+	local previousLightPdf = 0
+
+	if r.wavelength > 0 then
+		attenuation = spectrum.wavelengthToRgb(r.wavelength)
+	end
 
 	for depth = 1, maxDepth do
-		local rec = world:hit(ray, 0.001, math.huge)
+		local analyticEmission = vector.zero
+		local analyticDistance = math.huge
+		local analyticPdf = 0
+
+		if depth > 1 then
+			analyticEmission, analyticDistance, analyticPdf = analyticLightHit(sceneLights, ray.origin, ray.direction)
+		end
+
+		local rec = world:hit(ray, 0.001, analyticDistance - 0.001)
 
 		if not rec then
+			if maxComponent(analyticEmission) > 0 then
+				local weight = powerHeuristic(previousBsdfPdf, analyticPdf)
+				accum += attenuation * analyticEmission * weight
+
+				return accum
+			end
+
 			return accum + attenuation * background(ray)
 		end
 
 		if rec.material.emitted then
-			accum += attenuation * (rec.material :: any):emitted(rec)
-		end
+			local emitted = (rec.material :: any):emitted(rec)
+			local weight = 1
 
-		if sceneLights and rec.material.evalDirect and math.max(attenuation.x, attenuation.y, attenuation.z) > 0.01 then
-			for _, light in sceneLights do
-				local s = light:sample(rec.p)
-				local shadow = Ray.new(rec.p, s.dir, ray.time, ray.wavelength)
-
-				if not world:hit(shadow, 0.001, s.distance - 0.001) then
-					local f = (rec.material :: any):evalDirect(ray, rec, s.dir)
-					accum += attenuation * f * s.emitted / s.probability
-				end
+			if depth > 1 and previousBsdfPdf > 0 then
+				weight = powerHeuristic(previousBsdfPdf, previousLightPdf)
 			end
+
+			accum += attenuation * emitted * weight
 		end
+
+		accum += addDirectLighting(ray, rec, attenuation, world, sceneLights, samplers)
 
 		local att, scattered = rec.material:scatter(ray, rec)
 
@@ -52,28 +204,24 @@ function integrator.rayColor(
 			return accum
 		end
 
-		if samplers and rec.material.probability then
+		previousBsdfPdf = 0
+		previousLightPdf = 0
+
+		if rec.material.probability then
 			local matProbability = (rec.material :: any):probability(ray, rec)
-			local lightProbability = probabilityMod.Hittable.new(samplers, rec.p)
-			local mixed = probabilityMod.Mixture.new(lightProbability, matProbability)
+			previousBsdfPdf = matProbability:value(scattered.direction)
 
-			local newDir = mixed:generate()
-			scattered = Ray.new(rec.p, newDir, ray.time, ray.wavelength)
-
-			local samplingDensity = mixed:value(newDir)
-			local brdfDensity = matProbability:value(newDir)
-
-			if samplingDensity <= 0 or brdfDensity <= 0 then
+			if previousBsdfPdf <= 0 then
 				return accum
 			end
 
-			attenuation *= att * brdfDensity / samplingDensity
-		else
-			attenuation *= att
+			previousLightPdf = lightPdf(sceneLights, samplers, rec.p, scattered.direction)
 		end
 
+		attenuation *= att
+
 		if depth >= 8 then
-			local survive = math.min(0.95, math.max(attenuation.x, attenuation.y, attenuation.z))
+			local survive = math.min(0.95, maxComponent(attenuation))
 			if math.random() > survive then
 				return accum
 			end
@@ -99,7 +247,10 @@ function integrator.firstHitGBuffer(r: Ray.Ray, world: hittable.Hittable): (vect
 
 		local material = rec.material
 		lastNormal = rec.normal
-		lastAlbedo = if material.surfaceAlbedo then (material :: any):surfaceAlbedo(rec) else vector.one
+		lastAlbedo = vector.one
+		if material.surfaceAlbedo then
+			lastAlbedo = (material :: any):surfaceAlbedo(rec)
+		end
 
 		if not material.specularBounce then
 			return lastAlbedo, lastNormal

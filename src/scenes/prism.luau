@@ -21,8 +21,21 @@ function prism.build(): types.Scene
 	world:add(Sphere.new(Vec3.new(0, 1, 0), 1, material.Dielectric.new(1.45, 0.06)))
 	world:add(Sphere.new(Vec3.new(2.4, 1, 0), 1, material.Dielectric.new(1.45, 0.12)))
 
-	world:add(Sphere.new(Vec3.new(-1.2, 0.45, -2.5), 0.45, material.Dielectric.new(1.6, 0.10)))
-	world:add(Sphere.new(Vec3.new(1.2, 0.45, -2.5), 0.45, material.Dielectric.new(1.3, 0.10)))
+	-- tinted dispersive gems: Beer-Lambert absorption (ruby, emerald)
+	world:add(
+		Sphere.new(
+			Vec3.new(-1.2, 0.45, -2.5),
+			0.45,
+			material.Dielectric.new(1.77, 0.05, Vec3.new(0.92, 0.20, 0.18), 2.5)
+		)
+	)
+	world:add(
+		Sphere.new(
+			Vec3.new(1.2, 0.45, -2.5),
+			0.45,
+			material.Dielectric.new(1.58, 0.05, Vec3.new(0.20, 0.85, 0.32), 2.5)
+		)
+	)
 
 	return {
 		objects = world.objects,

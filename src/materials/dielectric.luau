@@ -10,12 +10,42 @@ local spectrum = require("../render/spectrum")
 local Dielectric = {}
 Dielectric.__index = Dielectric
 
-export type Dielectric = typeof(setmetatable({} :: { refractionIndex: number, dispersion: number }, Dielectric))
+export type Dielectric = typeof(setmetatable(
+	{} :: {
+		refractionIndex: number,
+		dispersion: number,
+		sigma: vector,
+		absorbs: boolean,
+	},
+	Dielectric
+))
 
-function Dielectric.new(refractionIndex: number, dispersion: number?): hittable.Material
+local TINT_FLOOR = 1e-6
+
+function Dielectric.new(
+	refractionIndex: number,
+	dispersion: number?,
+	tint: vector?,
+	absorption: number?
+): hittable.Material
+	local t = tint or vector.one
+	local a = absorption or 0
+	local absorbs = a > 0 and (t.x < 1 or t.y < 1 or t.z < 1)
+	local sigma = vector.zero
+
+	if absorbs then
+		sigma = vector.create(
+			-math.log(math.max(t.x, TINT_FLOOR)),
+			-math.log(math.max(t.y, TINT_FLOOR)),
+			-math.log(math.max(t.z, TINT_FLOOR))
+		) * a
+	end
+
 	return setmetatable({
 		refractionIndex = refractionIndex,
 		dispersion = dispersion or 0,
+		sigma = sigma,
+		absorbs = absorbs,
 	}, Dielectric) :: any
 end
 
@@ -48,7 +78,15 @@ function Dielectric.scatter(self: Dielectric, rIn: Ray.Ray, rec: hittable.HitRec
 		direction = Vec3.refract(unitDir, rec.normal, ri)
 	end
 
-	return vector.one, Ray.new(rec.p, direction, rIn.time, rIn.wavelength)
+	local attenuation = vector.one
+	if self.absorbs and not rec.frontFace then
+		local distance = rec.t * vector.magnitude(rIn.direction)
+		local s = self.sigma
+
+		attenuation = vector.create(math.exp(-s.x * distance), math.exp(-s.y * distance), math.exp(-s.z * distance))
+	end
+
+	return attenuation, Ray.new(rec.p, direction, rIn.time, rIn.wavelength)
 end
 
 function Dielectric.surfaceAlbedo(_self: Dielectric, _rec: hittable.HitRecord): vector

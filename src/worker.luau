@@ -77,13 +77,13 @@ function worker.renderTile(args: {
 		for i = 0, args.width - 1 do
 			local pixelColor = vector.zero
 
-			local firstRay = camera:getRay(i, j)
+			local firstRay = camera:getRay(i, j, 1)
 			local a, n = integrator.firstHitGBuffer(firstRay, bvh)
 			pixelColor += integrator.rayColor(firstRay, args.depth, bvh, sky, scene.lights, scene.samplers)
 
-			for _ = 2, args.samples do
+			for sampleIndex = 2, args.samples do
 				pixelColor += integrator.rayColor(
-					camera:getRay(i, j),
+					camera:getRay(i, j, sampleIndex),
 					args.depth,
 					bvh,
 					sky,

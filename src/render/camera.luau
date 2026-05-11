@@ -5,6 +5,7 @@
 local Vec3 = require("../math/vec3")
 local Ray = require("../core/ray")
 local spectrum = require("./spectrum")
+local sampler = require("./sampler")
 
 local Camera = {}
 Camera.__index = Camera
@@ -121,22 +122,35 @@ function Camera.new(scene: SceneConfig, render: RenderConfig): Camera
 	return self
 end
 
-function Camera.sampleSquare(): Vec3.Vec3
-	return Vec3.new(math.random() - 0.5, math.random() - 0.5, 0)
+function Camera.sampleSquare(i: number, j: number, sampleIndex: number): Vec3.Vec3
+	return sampler.centeredSquare(i, j, sampleIndex, 0)
 end
 
-function Camera.defocusDiskSample(self: Camera): Vec3.Point3
-	local p = Vec3.randomInUnitDisk()
+function Camera.defocusDiskSample(self: Camera, i: number, j: number, sampleIndex: number): Vec3.Point3
+	local p = sampler.disk(i, j, sampleIndex, 2)
 
 	return self.center + p.x * self.defocusDiskU + p.y * self.defocusDiskV
 end
 
-function Camera.getRay(self: Camera, i: number, j: number): Ray.Ray
-	local offset = Camera.sampleSquare()
+function Camera.getRay(self: Camera, i: number, j: number, sampleIndex: number?): Ray.Ray
+	local index = sampleIndex or 1
+	local offset = Camera.sampleSquare(i, j, index)
 	local pixelSample = self.pixel00Loc + ((i + offset.x) * self.pixelDeltaU) + ((j + offset.y) * self.pixelDeltaV)
-	local origin = if self.defocusAngle <= 0 then self.center else self:defocusDiskSample()
-	local time = if self.time1 > self.time0 then self.time0 + math.random() * (self.time1 - self.time0) else self.time0
-	local wavelength = if self.spectral then spectrum.sampleWavelength() else 0
+
+	local origin = self.center
+	if self.defocusAngle > 0 then
+		origin = self:defocusDiskSample(i, j, index)
+	end
+
+	local time = self.time0
+	if self.time1 > self.time0 then
+		time += sampler.dimension(i, j, index, 4) * (self.time1 - self.time0)
+	end
+
+	local wavelength = 0
+	if self.spectral then
+		wavelength = spectrum.sampleWavelength(sampler.dimension(i, j, index, 5))
+	end
 
 	return Ray.new(origin, pixelSample - origin, time, wavelength)
 end

@@ -82,8 +82,8 @@ do
 	NORMALIZE = vector.create(samples / sumR, samples / sumG, samples / sumB)
 end
 
-function spectrum.sampleWavelength(): number
-	return LAMBDA_MIN + math.random() * LAMBDA_RANGE
+function spectrum.sampleWavelength(u: number?): number
+	return LAMBDA_MIN + (u or math.random()) * LAMBDA_RANGE
 end
 
 function spectrum.wavelengthToRgb(lam: number): vector

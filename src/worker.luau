@@ -37,6 +37,7 @@ function worker.renderTile(args: {
 	rngSeed: number,
 	aspectRatio: number,
 	scene: string,
+	denoise: boolean,
 }): TileResult
 	local builder = scenes[args.scene]
 	if not builder then
@@ -70,8 +71,8 @@ function worker.renderTile(args: {
 	local pixelCount = (args.yEnd - args.yStart) * args.width
 	local byteSize = pixelCount * 12
 	local colorBuf = buffer.create(byteSize)
-	local albedoBuf = buffer.create(byteSize)
-	local normalBuf = buffer.create(byteSize)
+	local albedoBuf: buffer? = if args.denoise then buffer.create(byteSize) else nil
+	local normalBuf: buffer? = if args.denoise then buffer.create(byteSize) else nil
 
 	local offset = 0
 	for j = args.yStart, args.yEnd - 1 do
@@ -79,7 +80,12 @@ function worker.renderTile(args: {
 			local pixelColor = vector.zero
 
 			local firstRay = camera:getRay(i, j, 1)
-			local a, n = integrator.firstHitGBuffer(firstRay, bvh)
+			local firstAlbedo = vector.zero
+			local firstNormal = vector.zero
+			if args.denoise then
+				firstAlbedo, firstNormal = integrator.firstHitGBuffer(firstRay, bvh)
+			end
+
 			pixelColor += integrator.rayColor(
 				firstRay,
 				args.depth,
@@ -106,20 +112,27 @@ function worker.renderTile(args: {
 			buffer.writef32(colorBuf, offset, pixelColor.x)
 			buffer.writef32(colorBuf, offset + 4, pixelColor.y)
 			buffer.writef32(colorBuf, offset + 8, pixelColor.z)
-			buffer.writef32(albedoBuf, offset, a.x)
-			buffer.writef32(albedoBuf, offset + 4, a.y)
-			buffer.writef32(albedoBuf, offset + 8, a.z)
-			buffer.writef32(normalBuf, offset, n.x)
-			buffer.writef32(normalBuf, offset + 4, n.y)
-			buffer.writef32(normalBuf, offset + 8, n.z)
+
+			if args.denoise then
+				local ab = albedoBuf :: buffer
+				local nb = normalBuf :: buffer
+
+				buffer.writef32(ab, offset, firstAlbedo.x)
+				buffer.writef32(ab, offset + 4, firstAlbedo.y)
+				buffer.writef32(ab, offset + 8, firstAlbedo.z)
+				buffer.writef32(nb, offset, firstNormal.x)
+				buffer.writef32(nb, offset + 4, firstNormal.y)
+				buffer.writef32(nb, offset + 8, firstNormal.z)
+			end
+
 			offset += 12
 		end
 	end
 
 	return {
 		color = buffer.tostring(colorBuf),
-		albedo = buffer.tostring(albedoBuf),
-		normal = buffer.tostring(normalBuf),
+		albedo = if albedoBuf then buffer.tostring(albedoBuf) else "",
+		normal = if normalBuf then buffer.tostring(normalBuf) else "",
 	}
 end
 

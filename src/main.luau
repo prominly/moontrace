@@ -92,6 +92,7 @@ for w = 1, THREADS do
 				rngSeed = currentTile + 100,
 				aspectRatio = 16 / 9,
 				scene = SCENE,
+				denoise = denoiseEnabled,
 			})
 			tilesDone += 1
 		end
@@ -106,26 +107,38 @@ local tRender = os.clock() - tRenderStart
 
 -- assembly
 local pixelCount = WIDTH * HEIGHT
-local color = table.create(pixelCount)
-local albedo = table.create(pixelCount)
-local normal = table.create(pixelCount)
+local color = table.create(pixelCount) :: { vector }
+local albedo = (if denoiseEnabled then table.create(pixelCount) else {}) :: { vector }
+local normal = (if denoiseEnabled then table.create(pixelCount) else {}) :: { vector }
 
 local cursor = 1
 for t = 1, tileCount do
 	local r = results[t]
 	local offset = 0
 	local cb = buffer.fromstring(r.color)
-	local ab = buffer.fromstring(r.albedo)
-	local nb = buffer.fromstring(r.normal)
+	local ab: buffer? = if denoiseEnabled then buffer.fromstring(r.albedo) else nil
+	local nb: buffer? = if denoiseEnabled then buffer.fromstring(r.normal) else nil
 	local tilePixels = buffer.len(cb) // 12
 
 	for _ = 1, tilePixels do
 		color[cursor] =
 			vector.create(buffer.readf32(cb, offset), buffer.readf32(cb, offset + 4), buffer.readf32(cb, offset + 8))
-		albedo[cursor] =
-			vector.create(buffer.readf32(ab, offset), buffer.readf32(ab, offset + 4), buffer.readf32(ab, offset + 8))
-		normal[cursor] =
-			vector.create(buffer.readf32(nb, offset), buffer.readf32(nb, offset + 4), buffer.readf32(nb, offset + 8))
+
+		if denoiseEnabled then
+			local albedoBuf = ab :: buffer
+			local normalBuf = nb :: buffer
+
+			albedo[cursor] = vector.create(
+				buffer.readf32(albedoBuf, offset),
+				buffer.readf32(albedoBuf, offset + 4),
+				buffer.readf32(albedoBuf, offset + 8)
+			)
+			normal[cursor] = vector.create(
+				buffer.readf32(normalBuf, offset),
+				buffer.readf32(normalBuf, offset + 4),
+				buffer.readf32(normalBuf, offset + 8)
+			)
+		end
 
 		offset += 12
 		cursor += 1

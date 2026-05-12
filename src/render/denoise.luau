@@ -85,14 +85,15 @@ function denoise.atrous(
 	height: number
 ): { vector }
 	local pixelCount = width * height
-	local a = table.create(pixelCount)
-	local b = table.create(pixelCount)
+	local a = table.create(pixelCount) :: { vector }
+	local b = table.create(pixelCount) :: { vector }
 
 	for i = 1, pixelCount do
 		a[i] = color[i] / clampedAlbedo(albedo[i])
 	end
 
-	local input, output = a, b
+	local input: { vector } = a
+	local output: { vector } = b
 	for k = 0, ITERATIONS - 1 do
 		local stepSize = 2 ^ k
 

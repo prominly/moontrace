@@ -39,7 +39,7 @@ function showcase.build(): types.Scene
 	local world = HittableList.new()
 
 	-- ground: slightly rough metal, dark teal, reflects the sunset sky
-	world:add(Sphere.new(Vec3.new(0, -1000, 0), 1000, material.Metal.new(Vec3.new(0.22, 0.26, 0.32), 0.02)))
+	world:add(Sphere.new(Vec3.new(0, -1000, 0), 1000, material.PBR.new(Vec3.new(0.22, 0.26, 0.32), 1.0, 0.18)))
 
 	-- distant objects on the horizon
 	world:add(Sphere.new(Vec3.new(-30, 0, -22), 8.5, material.Lambertian.new(textures.Noise.new(64))))
@@ -68,15 +68,15 @@ function showcase.build(): types.Scene
 
 	-- glass, rust, polished
 	world:add(Sphere.new(Vec3.new(0, 3.5, 0), 3.5, material.Dielectric.new(1.5, 0.06)))
-	world:add(Sphere.new(Vec3.new(-7.5, 2.0, -2.5), 2.0, material.Lambertian.new(Vec3.new(0.55, 0.25, 0.15))))
-	world:add(Sphere.new(Vec3.new(6.0, 1.6, -3.5), 1.6, material.Metal.new(Vec3.new(0.88, 0.75, 0.40), 0.0)))
+	world:add(Sphere.new(Vec3.new(-7.5, 2.0, -2.5), 2.0, material.PBR.new(Vec3.new(0.55, 0.25, 0.15), 0.0, 0.72)))
+	world:add(Sphere.new(Vec3.new(6.0, 1.6, -3.5), 1.6, material.PBR.new(Vec3.new(0.88, 0.75, 0.40), 1.0, 0.06)))
 
 	-- large waterline boulders
 	world:add(Sphere.new(Vec3.new(4.2, 1.0, 2.8), 1.0, material.Lambertian.new(Vec3.new(0.45, 0.35, 0.20))))
 	world:add(Sphere.new(Vec3.new(-3.8, 0.8, 3.0), 0.8, material.Dielectric.new(1.33, 0.06)))
 	world:add(Sphere.new(Vec3.new(-2.2, 0.9, -4.5), 0.9, material.Metal.new(Vec3.new(0.85, 0.85, 0.88), 0.0)))
 	world:add(Sphere.new(Vec3.new(3.0, 0.7, -5.5), 0.7, material.Lambertian.new(Vec3.new(0.30, 0.15, 0.40))))
-	world:add(Sphere.new(Vec3.new(-9.5, 0.6, 1.5), 0.6, material.Metal.new(Vec3.new(0.78, 0.55, 0.35), 0.1)))
+	world:add(Sphere.new(Vec3.new(-9.5, 0.6, 1.5), 0.6, material.PBR.new(Vec3.new(0.78, 0.55, 0.35), 1.0, 0.25)))
 
 	-- track every ground-level object so the scatter can reject any overlap
 	local placed = {
@@ -123,7 +123,7 @@ function showcase.build(): types.Scene
 							currentMaterial = material.Lambertian.new(PEBBLE_PALETTE[math.random(#PEBBLE_PALETTE)])
 						elseif roll < 0.85 then
 							currentMaterial =
-								material.Metal.new(METAL_TINT[math.random(#METAL_TINT)], math.random() * 0.25)
+								material.PBR.new(METAL_TINT[math.random(#METAL_TINT)], 1.0, 0.04 + math.random() * 0.35)
 						else
 							currentMaterial = material.Dielectric.new(if math.random() < 0.5 then 1.33 else 1.5, 0.06)
 						end
@@ -138,9 +138,9 @@ function showcase.build(): types.Scene
 	-- satellites drifting around the main sphere
 	local lightSphere = Sphere.new(Vec3.new(4.5, 5.8, 1.5), 0.40, material.DiffuseLight.new(Vec3.new(8, 4, 2)))
 	world:add(lightSphere)
-	world:add(Sphere.new(Vec3.new(-4.8, 4.5, -3.0), 0.45, material.Metal.new(Vec3.new(0.88, 0.85, 0.82), 0.0)))
+	world:add(Sphere.new(Vec3.new(-4.8, 4.5, -3.0), 0.45, material.PBR.new(Vec3.new(0.88, 0.85, 0.82), 1.0, 0.04)))
 	world:add(Sphere.new(Vec3.new(4.2, 7.6, -2.5), 0.35, material.Dielectric.new(1.8, 0.06)))
-	world:add(Sphere.new(Vec3.new(-3.8, 7.2, 3.0), 0.35, material.Metal.new(Vec3.new(0.78, 0.55, 0.35), 0.05)))
+	world:add(Sphere.new(Vec3.new(-3.8, 7.2, 3.0), 0.35, material.PBR.new(Vec3.new(0.78, 0.55, 0.35), 1.0, 0.18)))
 	world:add(Sphere.new(Vec3.new(1.8, 2.5, 5.0), 0.32, material.Lambertian.new(Vec3.new(0.80, 0.70, 0.30))))
 	world:add(Sphere.new(Vec3.new(-5.5, 5.0, 3.5), 0.38, material.Lambertian.new(Vec3.new(0.20, 0.55, 0.60))))
 
@@ -158,7 +158,7 @@ function showcase.build(): types.Scene
 			Vec3.new(1.2, 10.2, 0.8),
 			Vec3.new(1.0, 10.5, 0.6),
 			0.40,
-			material.Metal.new(Vec3.new(0.90, 0.75, 0.45), 0.02)
+			material.PBR.new(Vec3.new(0.90, 0.75, 0.45), 1.0, 0.09)
 		)
 	)
 	world:add(
@@ -174,7 +174,7 @@ function showcase.build(): types.Scene
 	)
 
 	-- lone high spheres
-	world:add(Sphere.new(Vec3.new(-6.5, 12.0, -4.5), 0.55, material.Metal.new(Vec3.new(0.88, 0.88, 0.92), 0.0)))
+	world:add(Sphere.new(Vec3.new(-6.5, 12.0, -4.5), 0.55, material.PBR.new(Vec3.new(0.88, 0.88, 0.92), 1.0, 0.04)))
 	world:add(Sphere.new(Vec3.new(8.0, 11.2, -6.0), 0.45, material.Dielectric.new(1.5, 0.06)))
 
 	-- boxes

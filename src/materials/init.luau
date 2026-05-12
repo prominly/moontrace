@@ -4,6 +4,7 @@
 
 local Lambertian = require("@self/lambertian")
 local Metal = require("@self/metal")
+local PBR = require("@self/pbr")
 local Dielectric = require("@self/dielectric")
 local DiffuseLight = require("@self/diffuse_light")
 local Isotropic = require("@self/isotropic")
@@ -11,6 +12,7 @@ local Isotropic = require("@self/isotropic")
 return {
 	Lambertian = Lambertian,
 	Metal = Metal,
+	PBR = PBR,
 	Dielectric = Dielectric,
 	DiffuseLight = DiffuseLight,
 	Isotropic = Isotropic,

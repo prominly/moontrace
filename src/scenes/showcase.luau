@@ -39,17 +39,25 @@ function showcase.build(): types.Scene
 	local world = HittableList.new()
 
 	-- ground: slightly rough metal, dark teal, reflects the sunset sky
-	world:add(Sphere.new(Vec3.new(0, -1000, 0), 1000, material.PBR.new(Vec3.new(0.22, 0.26, 0.32), 1.0, 0.18)))
+	world:add(
+		Sphere.new(
+			Vec3.new(0, -1000, 0),
+			1000,
+			material.PBR.new(Vec3.new(0.22, 0.26, 0.32), 1.0, textures.Noise.new(9))
+		)
+	)
 
 	-- distant objects on the horizon
-	world:add(Sphere.new(Vec3.new(-30, 0, -22), 8.5, material.Lambertian.new(textures.Noise.new(64))))
+	world:add(Sphere.new(Vec3.new(-30, 0, -22), 8.5, material.PBR.new(textures.Noise.new(64), 0.0, 0.82)))
 	world:add(Sphere.new(Vec3.new(28, 0, -38), 12.0, material.Lambertian.new(Vec3.new(0.08, 0.07, 0.15))))
 	world:add(
 		Sphere.new(
 			Vec3.new(-15, 0, -45),
 			10.5,
-			material.Lambertian.new(
-				textures.loadOrDefault("assets/textures/earth_texture.ppm", Vec3.new(0.09, 0.08, 0.17))
+			material.PBR.new(
+				textures.loadOrDefault("assets/textures/earth_texture.ppm", Vec3.new(0.09, 0.08, 0.17)),
+				0.0,
+				0.7
 			)
 		)
 	)
@@ -58,8 +66,10 @@ function showcase.build(): types.Scene
 		Sphere.new(
 			Vec3.new(-55, 0, -8),
 			13.0,
-			material.Lambertian.new(
-				textures.loadOrDefault("assets/textures/moon_texture.ppm", Vec3.new(0.07, 0.06, 0.13))
+			material.PBR.new(
+				textures.loadOrDefault("assets/textures/moon_texture.ppm", Vec3.new(0.07, 0.06, 0.13)),
+				0.0,
+				0.88
 			)
 		)
 	)
@@ -68,15 +78,33 @@ function showcase.build(): types.Scene
 
 	-- glass, rust, polished
 	world:add(Sphere.new(Vec3.new(0, 3.5, 0), 3.5, material.Dielectric.new(1.5, 0.06)))
-	world:add(Sphere.new(Vec3.new(-7.5, 2.0, -2.5), 2.0, material.PBR.new(Vec3.new(0.55, 0.25, 0.15), 0.0, 0.72)))
+	world:add(
+		Sphere.new(
+			Vec3.new(-7.5, 2.0, -2.5),
+			2.0,
+			material.PBR.new(Vec3.new(0.55, 0.25, 0.15), 0.0, textures.Noise.new(18))
+		)
+	)
 	world:add(Sphere.new(Vec3.new(6.0, 1.6, -3.5), 1.6, material.PBR.new(Vec3.new(0.88, 0.75, 0.40), 1.0, 0.06)))
 
 	-- large waterline boulders
-	world:add(Sphere.new(Vec3.new(4.2, 1.0, 2.8), 1.0, material.Lambertian.new(Vec3.new(0.45, 0.35, 0.20))))
+	world:add(
+		Sphere.new(
+			Vec3.new(4.2, 1.0, 2.8),
+			1.0,
+			material.PBR.new(Vec3.new(0.45, 0.35, 0.20), 0.0, textures.Noise.new(11))
+		)
+	)
 	world:add(Sphere.new(Vec3.new(-3.8, 0.8, 3.0), 0.8, material.Dielectric.new(1.33, 0.06)))
 	world:add(Sphere.new(Vec3.new(-2.2, 0.9, -4.5), 0.9, material.Metal.new(Vec3.new(0.85, 0.85, 0.88), 0.0)))
 	world:add(Sphere.new(Vec3.new(3.0, 0.7, -5.5), 0.7, material.Lambertian.new(Vec3.new(0.30, 0.15, 0.40))))
-	world:add(Sphere.new(Vec3.new(-9.5, 0.6, 1.5), 0.6, material.PBR.new(Vec3.new(0.78, 0.55, 0.35), 1.0, 0.25)))
+	world:add(
+		Sphere.new(
+			Vec3.new(-9.5, 0.6, 1.5),
+			0.6,
+			material.PBR.new(Vec3.new(0.78, 0.55, 0.35), textures.Noise.new(14), 0.25)
+		)
+	)
 
 	-- track every ground-level object so the scatter can reject any overlap
 	local placed = {
@@ -122,8 +150,11 @@ function showcase.build(): types.Scene
 						if roll < 0.55 then
 							currentMaterial = material.Lambertian.new(PEBBLE_PALETTE[math.random(#PEBBLE_PALETTE)])
 						elseif roll < 0.85 then
-							currentMaterial =
-								material.PBR.new(METAL_TINT[math.random(#METAL_TINT)], 1.0, 0.04 + math.random() * 0.35)
+							currentMaterial = material.PBR.new(
+								METAL_TINT[math.random(#METAL_TINT)],
+								1.0,
+								textures.Noise.new(8 + math.random() * 16)
+							)
 						else
 							currentMaterial = material.Dielectric.new(if math.random() < 0.5 then 1.33 else 1.5, 0.06)
 						end

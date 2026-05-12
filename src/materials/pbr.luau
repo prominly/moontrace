@@ -15,11 +15,22 @@ PBR.__index = PBR
 local PBRPdf = {}
 PBRPdf.__index = PBRPdf
 
+type ScalarInput = number | textureTypes.Texture
+type Surface = {
+	albedo: vector,
+	metallic: number,
+	roughness: number,
+	normal: vector,
+}
+
 export type PBR = typeof(setmetatable(
 	{} :: {
 		texture: textureTypes.Texture,
 		metallic: number,
+		metallicTexture: textureTypes.Texture?,
 		roughness: number,
+		roughnessTexture: textureTypes.Texture?,
+		normalTexture: textureTypes.Texture?,
 	},
 	PBR
 ))
@@ -93,12 +104,73 @@ local function sampleGgxNormal(normal: vector, alpha: number): vector
 	return vector.normalize(ONB.new(normal):transform(localH))
 end
 
-local function evaluateWithAlbedo(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, wi: vector, albedo: vector): vector
-	local n = rec.normal
+local function textureFrom(input: vector | textureTypes.Texture): textureTypes.Texture
+	if typeof(input) == "vector" then
+		return textures.Solid.new(input :: vector)
+	end
+
+	return input :: textureTypes.Texture
+end
+
+local function scalarInput(input: ScalarInput?, defaultValue: number): (number, textureTypes.Texture?)
+	if typeof(input) == "number" then
+		return math.clamp(input :: number, 0, 1), nil
+	end
+
+	if input then
+		return math.clamp(defaultValue, 0, 1), input :: textureTypes.Texture
+	end
+
+	return math.clamp(defaultValue, 0, 1), nil
+end
+
+local function scalarValue(texture: textureTypes.Texture?, fallback: number, rec: hittable.HitRecord): number
+	if texture then
+		return math.clamp(texture:value(rec.u, rec.v, rec.p).x, 0, 1)
+	end
+
+	return fallback
+end
+
+local function mappedNormal(texture: textureTypes.Texture?, rec: hittable.HitRecord): vector
+	if not texture then
+		return rec.normal
+	end
+
+	local sampled = texture:value(rec.u, rec.v, rec.p)
+	local tangentNormal = vector.create(sampled.x * 2 - 1, sampled.y * 2 - 1, sampled.z * 2 - 1)
+
+	if Vec3.lengthSquared(tangentNormal) <= EPS then
+		return rec.normal
+	end
+
+	local n = vector.normalize(ONB.new(rec.normal):transform(vector.normalize(tangentNormal)))
+	if vector.dot(n, rec.normal) <= EPS then
+		return rec.normal
+	end
+
+	return n
+end
+
+local function surfaceAt(self: PBR, rec: hittable.HitRecord): Surface
+	return {
+		albedo = self.texture:value(rec.u, rec.v, rec.p),
+		metallic = scalarValue(self.metallicTexture, self.metallic, rec),
+		roughness = math.max(MIN_ROUGHNESS, scalarValue(self.roughnessTexture, self.roughness, rec)),
+		normal = mappedNormal(self.normalTexture, rec),
+	}
+end
+
+local function evaluateSurface(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, wi: vector, surface: Surface): vector
+	local n = surface.normal
 	local l = safeUnit(wi)
 	local v = safeUnit(-rIn.direction)
 
 	if not l or not v then
+		return vector.zero
+	end
+
+	if vector.dot(rec.normal, l) <= 0 or vector.dot(rec.normal, v) <= 0 then
 		return vector.zero
 	end
 
@@ -121,27 +193,33 @@ local function evaluateWithAlbedo(self: PBR, rIn: Ray.Ray, rec: hittable.HitReco
 		return vector.zero
 	end
 
-	local alpha = alphaFor(self.roughness)
-	local f0 = f0For(albedo, self.metallic)
+	local albedo = surface.albedo
+	local metallic = surface.metallic
+	local alpha = alphaFor(surface.roughness)
+	local f0 = f0For(albedo, metallic)
 	local f = fresnelSchlick(vDotH, f0)
 	local d = ggxD(nDotH, alpha)
 	local g = smithG1(nDotL, alpha) * smithG1(nDotV, alpha)
 	local specular = f * (d * g / math.max(EPS, 4 * nDotL * nDotV))
-	local diffuse = (vector.one - f) * (1 - self.metallic) * albedo / math.pi
+	local diffuse = (vector.one - f) * (1 - metallic) * albedo / math.pi
 
 	return (diffuse + specular) * nDotL
 end
 
-local function diffusePdf(rec: hittable.HitRecord, wi: vector): number
+local function diffusePdf(normal: vector, rec: hittable.HitRecord, wi: vector): number
 	local l = safeUnit(wi)
 	if not l then
 		return 0
 	end
 
-	return math.max(0, vector.dot(rec.normal, l)) / math.pi
+	if vector.dot(rec.normal, l) <= 0 then
+		return 0
+	end
+
+	return math.max(0, vector.dot(normal, l)) / math.pi
 end
 
-local function specularPdf(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, wi: vector): number
+local function specularPdf(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, wi: vector, surface: Surface): number
 	local l = safeUnit(wi)
 	local v = safeUnit(-rIn.direction)
 
@@ -158,41 +236,44 @@ local function specularPdf(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, wi:
 		return 0
 	end
 
-	local nDotH = math.max(0, vector.dot(rec.normal, h))
+	local nDotH = math.max(0, vector.dot(surface.normal, h))
 	local vDotH = math.max(0, vector.dot(v, h))
 
 	if nDotH <= 0 or vDotH <= 0 then
 		return 0
 	end
 
-	return ggxD(nDotH, alphaFor(self.roughness)) * nDotH / (4 * vDotH)
+	return ggxD(nDotH, alphaFor(surface.roughness)) * nDotH / (4 * vDotH)
 end
 
-local function mixturePdf(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, wi: vector, albedo: vector): number
-	local chance = specularChance(albedo, self.metallic)
+local function mixturePdf(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, wi: vector, surface: Surface): number
+	local chance = specularChance(surface.albedo, surface.metallic)
 
-	return chance * specularPdf(self, rIn, rec, wi) + (1 - chance) * diffusePdf(rec, wi)
+	return chance * specularPdf(self, rIn, rec, wi, surface) + (1 - chance) * diffusePdf(surface.normal, rec, wi)
 end
 
-function PBR.new(albedo: vector | textureTypes.Texture, metallic: number?, roughness: number?): hittable.Material
-	local entity: textureTypes.Texture
-
-	if typeof(albedo) == "vector" then
-		entity = textures.Solid.new(albedo :: vector)
-	else
-		entity = albedo :: textureTypes.Texture
-	end
+function PBR.new(
+	albedo: vector | textureTypes.Texture,
+	metallic: ScalarInput?,
+	roughness: ScalarInput?,
+	normalMap: textureTypes.Texture?
+): hittable.Material
+	local metallicValue, metallicTexture = scalarInput(metallic, 0)
+	local roughnessValue, roughnessTexture = scalarInput(roughness, 0.5)
 
 	return setmetatable({
-		texture = entity,
-		metallic = math.clamp(metallic or 0, 0, 1),
-		roughness = math.clamp(roughness or 0.5, MIN_ROUGHNESS, 1),
+		texture = textureFrom(albedo),
+		metallic = metallicValue,
+		metallicTexture = metallicTexture,
+		roughness = math.max(MIN_ROUGHNESS, roughnessValue),
+		roughnessTexture = roughnessTexture,
+		normalTexture = normalMap,
 	}, PBR) :: any
 end
 
 function PBR.scatter(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?, Ray.Ray?)
-	local albedo = self:textureAlbedo(rec)
-	local chance = specularChance(albedo, self.metallic)
+	local surface = surfaceAt(self, rec)
+	local chance = specularChance(surface.albedo, surface.metallic)
 	local scatteredDir: vector? = nil
 
 	if math.random() < chance then
@@ -200,10 +281,10 @@ function PBR.scatter(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?
 
 		if v then
 			for _ = 1, 8 do
-				local h = sampleGgxNormal(rec.normal, alphaFor(self.roughness))
+				local h = sampleGgxNormal(surface.normal, alphaFor(surface.roughness))
 				local l = Vec3.reflect(-v, h)
 
-				if vector.dot(l, rec.normal) > EPS then
+				if vector.dot(l, surface.normal) > EPS and vector.dot(l, rec.normal) > EPS then
 					scatteredDir = vector.normalize(l)
 					break
 				end
@@ -212,16 +293,16 @@ function PBR.scatter(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?
 	end
 
 	if not scatteredDir then
-		scatteredDir = vector.normalize(ONB.new(rec.normal):transform(Vec3.randomCosineDirection()))
+		scatteredDir = vector.normalize(ONB.new(surface.normal):transform(Vec3.randomCosineDirection()))
 	end
 
 	local direction = scatteredDir :: vector
-	local pdf = mixturePdf(self, rIn, rec, direction, albedo)
+	local pdf = mixturePdf(self, rIn, rec, direction, surface)
 	if pdf <= EPS then
 		return nil, nil
 	end
 
-	local attenuation = evaluateWithAlbedo(self, rIn, rec, direction, albedo) / pdf
+	local attenuation = evaluateSurface(self, rIn, rec, direction, surface) / pdf
 	if maxComponent(attenuation) <= 0 then
 		return nil, nil
 	end
@@ -230,11 +311,11 @@ function PBR.scatter(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?
 end
 
 function PBR.probability(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord)
-	return setmetatable({ material = self, rIn = rIn, rec = rec }, PBRPdf)
+	return setmetatable({ material = self, rIn = rIn, rec = rec, surface = surfaceAt(self, rec) }, PBRPdf)
 end
 
 function PBR.evalDirect(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, wi: Vec3.Vec3): vector
-	return evaluateWithAlbedo(self, rIn, rec, wi, self:textureAlbedo(rec))
+	return evaluateSurface(self, rIn, rec, wi, surfaceAt(self, rec))
 end
 
 function PBR.textureAlbedo(self: PBR, rec: hittable.HitRecord): vector
@@ -246,11 +327,12 @@ function PBR.surfaceAlbedo(self: PBR, rec: hittable.HitRecord): vector
 end
 
 function PBR.specularBounce(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord): Ray.Ray?
-	if self.metallic < 0.9 or self.roughness > 0.05 then
+	local surface = surfaceAt(self, rec)
+	if surface.metallic < 0.9 or surface.roughness > 0.05 then
 		return nil
 	end
 
-	local reflected = Vec3.reflect(Vec3.unitVector(rIn.direction), rec.normal)
+	local reflected = Vec3.reflect(Vec3.unitVector(rIn.direction), surface.normal)
 	if vector.dot(reflected, rec.normal) <= 0 then
 		return nil
 	end
@@ -258,8 +340,11 @@ function PBR.specularBounce(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord): R
 	return Ray.new(rec.p, reflected, rIn.time, rIn.wavelength)
 end
 
-function PBRPdf.value(self: { material: PBR, rIn: Ray.Ray, rec: hittable.HitRecord }, direction: vector): number
-	return mixturePdf(self.material, self.rIn, self.rec, direction, self.material:textureAlbedo(self.rec))
+function PBRPdf.value(
+	self: { material: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, surface: Surface },
+	direction: vector
+): number
+	return mixturePdf(self.material, self.rIn, self.rec, direction, self.surface)
 end
 
 return PBR

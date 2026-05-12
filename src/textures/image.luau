@@ -9,7 +9,7 @@ local Image = {}
 Image.__index = Image
 
 export type Image = typeof(setmetatable(
-	{} :: { width: number, height: number, data: string, dataOffset: number },
+	{} :: { width: number, height: number, data: string, dataOffset: number, linear: boolean },
 	Image
 ))
 
@@ -77,28 +77,72 @@ end
 
 local cache: { [string]: Image } = {}
 
-local function makeImage(raw: string): Image
+local function makeImage(raw: string, linear: boolean): Image
 	local width, height, dataOffset = parsePpm(raw)
 
-	return setmetatable({ width = width, height = height, data = raw, dataOffset = dataOffset }, Image)
+	return setmetatable({ width = width, height = height, data = raw, dataOffset = dataOffset, linear = linear }, Image)
+end
+
+local function withColorSpace(image: Image, linear: boolean): Image
+	if image.linear == linear then
+		return image
+	end
+
+	return setmetatable({
+		width = image.width,
+		height = image.height,
+		data = image.data,
+		dataOffset = image.dataOffset,
+		linear = linear,
+	}, Image)
 end
 
 function Image.preload(path: string, raw: string)
-	cache[path] = makeImage(raw)
+	cache[path] = makeImage(raw, true)
 end
 
 function Image.hasCached(path: string): boolean
 	return cache[path] ~= nil
 end
 
-function Image.new(path: string): types.Texture
+function Image.new(path: string, linear: boolean?): types.Texture
+	local sampleLinear = if linear == nil then true else linear
 	local cached = cache[path]
 
 	if cached then
-		return cached :: any
+		return withColorSpace(cached, sampleLinear) :: any
 	end
 
-	return makeImage(readFile(path)) :: any
+	return makeImage(readFile(path), sampleLinear) :: any
+end
+
+local function srgbToLinear(c: number): number
+	if c <= 0.04045 then
+		return c / 12.92
+	end
+
+	return ((c + 0.055) / 1.055) ^ 2.4
+end
+
+local function lerp(a: number, b: number, t: number): number
+	return a + (b - a) * t
+end
+
+local function sampleByte(self: Image, x: number, y: number): vector
+	local index = self.dataOffset + (y * self.width + x) * 3
+	local r, g, b = string.byte(self.data, index, index + 2)
+
+	local rf = r / 255
+	local gf = g / 255
+	local bf = b / 255
+
+	if not self.linear then
+		rf = srgbToLinear(rf)
+		gf = srgbToLinear(gf)
+		bf = srgbToLinear(bf)
+	end
+
+	return vector.create(rf, gf, bf)
 end
 
 function Image.value(self: Image, u: number, v: number, _p: vector): vector
@@ -114,21 +158,33 @@ function Image.value(self: Image, u: number, v: number, _p: vector): vector
 		v = 1
 	end
 
-	local x = math.floor(u * self.width)
-	local y = math.floor((1 - v) * self.height)
+	local x = u * (self.width - 1)
+	local y = (1 - v) * (self.height - 1)
 
-	if x >= self.width then
-		x = self.width - 1
-	end
+	local x0 = math.floor(x)
+	local x1 = math.min(x0 + 1, self.width - 1)
 
-	if y >= self.height then
-		y = self.height - 1
-	end
+	local y0 = math.floor(y)
+	local y1 = math.min(y0 + 1, self.height - 1)
 
-	local index = self.dataOffset + (y * self.width + x) * 3
-	local r, g, b = string.byte(self.data, index, index + 2)
+	local tx = x - x0
+	local ty = y - y0
 
-	return vector.create(r / 255, g / 255, b / 255)
+	local c00 = sampleByte(self, x0, y0)
+	local c10 = sampleByte(self, x1, y0)
+	local c01 = sampleByte(self, x0, y1)
+	local c11 = sampleByte(self, x1, y1)
+
+	local r0 = lerp(c00.x, c10.x, tx)
+	local r1 = lerp(c01.x, c11.x, tx)
+
+	local g0 = lerp(c00.y, c10.y, tx)
+	local g1 = lerp(c01.y, c11.y, tx)
+
+	local b0 = lerp(c00.z, c10.z, tx)
+	local b1 = lerp(c01.z, c11.z, tx)
+
+	return vector.create(lerp(r0, r1, ty), lerp(g0, g1, ty), lerp(b0, b1, ty))
 end
 
 return Image

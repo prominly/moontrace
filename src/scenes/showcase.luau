@@ -141,12 +141,14 @@ function showcase.build(): types.Scene
 						if roll < 0.55 then
 							currentMaterial = material.Lambertian.new(PEBBLE_PALETTE[math.random(#PEBBLE_PALETTE)])
 						elseif roll < 0.85 then
+							local tint = METAL_TINT[math.random(#METAL_TINT)]
+							local surfaceRoll = math.random()
 							currentMaterial = material.PBR.new(
-								METAL_TINT[math.random(#METAL_TINT)],
+								tint,
 								1.0,
-								textures.Noise.new(8 + math.random() * 16),
+								textures.Noise.new(8 + surfaceRoll * 16),
 								nil,
-								textures.Noise.new(20 + math.random() * 24),
+								textures.Noise.new(20 + surfaceRoll * 24),
 								0.12
 							)
 						else
@@ -251,6 +253,7 @@ function showcase.build(): types.Scene
 		}),
 		lights = {
 			lights.Point.new(Vec3.new(-12, 14, 6), Vec3.new(1.0, 0.55, 0.30), 90, 2.0),
+			lights.Directional.new(Vec3.new(-0.6, 0.35, 0.7), Vec3.new(1.0, 0.55, 0.30), 1.8),
 		},
 		samplers = lightSphere,
 	}

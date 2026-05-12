@@ -46,7 +46,7 @@ function showcase.build(): types.Scene
 		Sphere.new(
 			Vec3.new(0, -1000, 0),
 			1000,
-			material.PBR.new(Vec3.new(0.22, 0.26, 0.32), 1.0, textures.Noise.new(9), nil, textures.Noise.new(36), 0.45)
+			material.PBR.new(Vec3.new(0.22, 0.26, 0.32), 1.0, textures.Noise.new(9), nil, textures.Noise.bump(36), 0.45)
 		)
 	)
 
@@ -55,7 +55,7 @@ function showcase.build(): types.Scene
 		Sphere.new(
 			Vec3.new(-30, 0, -22),
 			8.5,
-			material.PBR.new(textures.Noise.new(64), 0.0, 0.82, nil, textures.Noise.new(48), 0.35)
+			material.PBR.new(textures.Noise.new(64), 0.0, 0.82, nil, textures.Noise.bump(48), 0.35)
 		)
 	)
 	world:add(Sphere.new(Vec3.new(28, 0, -38), 12.0, material.Lambertian.new(Vec3.new(0.08, 0.07, 0.15))))
@@ -73,7 +73,7 @@ function showcase.build(): types.Scene
 		Sphere.new(
 			Vec3.new(-7.5, 2.0, -2.5),
 			2.0,
-			material.PBR.new(Vec3.new(0.55, 0.25, 0.15), 0.0, textures.Noise.new(18), nil, textures.Noise.new(32), 0.3)
+			material.PBR.new(Vec3.new(0.55, 0.25, 0.15), 0.0, textures.Noise.new(18), nil, textures.Noise.bump(32), 0.3)
 		)
 	)
 	world:add(Sphere.new(Vec3.new(6.0, 1.6, -3.5), 1.6, material.PBR.new(Vec3.new(0.88, 0.75, 0.40), 1.0, 0.06)))
@@ -83,7 +83,14 @@ function showcase.build(): types.Scene
 		Sphere.new(
 			Vec3.new(4.2, 1.0, 2.8),
 			1.0,
-			material.PBR.new(Vec3.new(0.45, 0.35, 0.20), 0.0, textures.Noise.new(11), nil, textures.Noise.new(28), 0.28)
+			material.PBR.new(
+				Vec3.new(0.45, 0.35, 0.20),
+				0.0,
+				textures.Noise.new(11),
+				nil,
+				textures.Noise.bump(28),
+				0.28
+			)
 		)
 	)
 	world:add(Sphere.new(Vec3.new(-3.8, 0.8, 3.0), 0.8, material.Dielectric.new(1.33, 0.06)))
@@ -93,7 +100,14 @@ function showcase.build(): types.Scene
 		Sphere.new(
 			Vec3.new(-9.5, 0.6, 1.5),
 			0.6,
-			material.PBR.new(Vec3.new(0.78, 0.55, 0.35), textures.Noise.new(14), 0.25, nil, textures.Noise.new(38), 0.2)
+			material.PBR.new(
+				Vec3.new(0.78, 0.55, 0.35),
+				textures.Noise.new(14),
+				0.25,
+				nil,
+				textures.Noise.bump(38),
+				0.2
+			)
 		)
 	)
 
@@ -148,7 +162,7 @@ function showcase.build(): types.Scene
 								1.0,
 								textures.Noise.new(8 + surfaceRoll * 16),
 								nil,
-								textures.Noise.new(20 + surfaceRoll * 24),
+								textures.Noise.bump(20 + surfaceRoll * 24),
 								0.12
 							)
 						else

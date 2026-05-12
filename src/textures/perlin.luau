@@ -7,7 +7,7 @@ local types = require("./types")
 local NoiseTexture = {}
 NoiseTexture.__index = NoiseTexture
 
-export type NoiseTexture = typeof(setmetatable({} :: { scale: number }, NoiseTexture))
+export type NoiseTexture = typeof(setmetatable({} :: { scale: number, depth: number }, NoiseTexture))
 
 local POINT_COUNT = 256
 local GREY = vector.create(0.5, 0.5, 0.5)
@@ -92,12 +92,16 @@ local function turb(p: vector, depth: number): number
 	return math.abs(accum)
 end
 
-function NoiseTexture.new(scale: number): types.Texture
-	return setmetatable({ scale = scale }, NoiseTexture) :: any
+function NoiseTexture.new(scale: number, depth: number?): types.Texture
+	return setmetatable({ scale = scale, depth = depth or 7 }, NoiseTexture) :: any
+end
+
+function NoiseTexture.bump(scale: number): types.Texture
+	return NoiseTexture.new(scale, 3)
 end
 
 function NoiseTexture.value(self: NoiseTexture, _u: number, _v: number, p: vector): vector
-	return GREY * (1 + math.sin(self.scale * p.z + 10 * turb(p, 7)))
+	return GREY * (1 + math.sin(self.scale * p.z + 10 * turb(p, self.depth)))
 end
 
 NoiseTexture.noise = noise

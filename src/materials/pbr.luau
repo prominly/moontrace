@@ -22,6 +22,10 @@ type Surface = {
 	roughness: number,
 	normal: vector,
 }
+type SurfaceCache = {
+	material: PBR,
+	surface: Surface,
+}
 
 export type PBR = typeof(setmetatable(
 	{} :: {
@@ -210,6 +214,19 @@ local function surfaceAt(self: PBR, rec: hittable.HitRecord): Surface
 	}
 end
 
+local function cachedSurfaceAt(self: PBR, rec: hittable.HitRecord): Surface
+	local cached = rec.materialCache :: SurfaceCache?
+
+	if cached and cached.material == self then
+		return cached.surface
+	end
+
+	local surface = surfaceAt(self, rec)
+	rec.materialCache = { material = self, surface = surface }
+
+	return surface
+end
+
 local function evaluateSurface(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, wi: vector, surface: Surface): vector
 	local n = surface.normal
 	local l = safeUnit(wi)
@@ -327,7 +344,7 @@ function PBR.new(
 end
 
 function PBR.scatter(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?, Ray.Ray?)
-	local surface = surfaceAt(self, rec)
+	local surface = cachedSurfaceAt(self, rec)
 	local chance = specularChance(surface.albedo, surface.metallic)
 	local scatteredDir: vector? = nil
 
@@ -366,11 +383,11 @@ function PBR.scatter(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord): (vector?
 end
 
 function PBR.probability(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord)
-	return setmetatable({ material = self, rIn = rIn, rec = rec, surface = surfaceAt(self, rec) }, PBRPdf)
+	return setmetatable({ material = self, rIn = rIn, rec = rec, surface = cachedSurfaceAt(self, rec) }, PBRPdf)
 end
 
 function PBR.evalDirect(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord, wi: Vec3.Vec3): vector
-	return evaluateSurface(self, rIn, rec, wi, surfaceAt(self, rec))
+	return evaluateSurface(self, rIn, rec, wi, cachedSurfaceAt(self, rec))
 end
 
 function PBR.textureAlbedo(self: PBR, rec: hittable.HitRecord): vector
@@ -378,11 +395,11 @@ function PBR.textureAlbedo(self: PBR, rec: hittable.HitRecord): vector
 end
 
 function PBR.surfaceAlbedo(self: PBR, rec: hittable.HitRecord): vector
-	return self:textureAlbedo(rec)
+	return cachedSurfaceAt(self, rec).albedo
 end
 
 function PBR.specularBounce(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord): Ray.Ray?
-	local surface = surfaceAt(self, rec)
+	local surface = cachedSurfaceAt(self, rec)
 	if surface.metallic < 0.9 or surface.roughness > 0.05 then
 		return nil
 	end

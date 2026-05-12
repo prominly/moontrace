@@ -188,6 +188,61 @@ function BVH.hit(self: BVH, r: Ray.Ray, tMin: number, tMax: number): hittable.Hi
 	return closestRec
 end
 
+function BVH.occluded(self: BVH, r: Ray.Ray, tMin: number, tMax: number): boolean
+	local origin = r.origin
+	local invD = r.invDirection
+
+	local stack = TRAVERSAL_STACK
+	stack[1] = self
+	local top = 1
+
+	while top > 0 do
+		local node = stack[top]
+		top -= 1
+
+		local t0 = (node.boxMin - origin) * invD
+		local t1 = (node.boxMax - origin) * invD
+		local tNear = vector.min(t0, t1)
+		local tFar = vector.max(t0, t1)
+
+		if math.min(tMax, tFar.x, tFar.y, tFar.z) <= math.max(tMin, tNear.x, tNear.y, tNear.z) then
+			continue
+		end
+
+		local right = node.right
+		if (right :: any)._isBVH then
+			top += 1
+			stack[top] = right :: any
+		else
+			local rightOccluded = (right :: any).occluded
+			if rightOccluded then
+				if rightOccluded(right, r, tMin, tMax) then
+					return true
+				end
+			elseif (right :: any):hit(r, tMin, tMax) then
+				return true
+			end
+		end
+
+		local left = node.left
+		if (left :: any)._isBVH then
+			top += 1
+			stack[top] = left :: any
+		else
+			local leftOccluded = (left :: any).occluded
+			if leftOccluded then
+				if leftOccluded(left, r, tMin, tMax) then
+					return true
+				end
+			elseif (left :: any):hit(r, tMin, tMax) then
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
 function BVH.boundingBox(self: BVH): AABB.AABB
 	return self.box
 end

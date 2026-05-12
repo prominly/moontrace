@@ -37,6 +37,17 @@ function Translation.hit(self: Translation, r: Ray.Ray, tMin: number, tMax: numb
 	return rec
 end
 
+function Translation.occluded(self: Translation, r: Ray.Ray, tMin: number, tMax: number): boolean
+	local moved = Ray.new(r.origin - self.offset, r.direction, r.time, r.wavelength)
+	local objectOccluded = (self.object :: any).occluded
+
+	if objectOccluded then
+		return objectOccluded(self.object, moved, tMin, tMax)
+	end
+
+	return self.object:hit(moved, tMin, tMax) ~= nil
+end
+
 function Translation.boundingBox(self: Translation): AABB.AABB
 	return self.bbox
 end

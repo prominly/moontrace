@@ -96,6 +96,27 @@ function Quad.hit(self: Quad, r: Ray.Ray, tMin: number, tMax: number): hittable.
 	return hittable.makeHitRecord(r, t, p, self.normal, self.material, alpha, beta, tangent, bitangent)
 end
 
+function Quad.occluded(self: Quad, r: Ray.Ray, tMin: number, tMax: number): boolean
+	local denom = vector.dot(self.normal, r.direction)
+
+	if math.abs(denom) < 1e-8 then
+		return false
+	end
+
+	local t = (self.D - vector.dot(self.normal, r.origin)) / denom
+
+	if t <= tMin or t >= tMax then
+		return false
+	end
+
+	local p = Ray.at(r, t)
+	local planar = p - self.Q
+	local alpha = vector.dot(self.w, vector.cross(planar, self.v))
+	local beta = vector.dot(self.w, vector.cross(self.u, planar))
+
+	return alpha >= 0 and alpha <= 1 and beta >= 0 and beta <= 1
+end
+
 function Quad.boundingBox(self: Quad): AABB.AABB
 	return self.bbox
 end

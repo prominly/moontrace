@@ -34,6 +34,22 @@ function HittableList.hit(self: HittableList, r: Ray.Ray, tMin: number, tMax: nu
 	return hitRec
 end
 
+function HittableList.occluded(self: HittableList, r: Ray.Ray, tMin: number, tMax: number): boolean
+	for _, object in self.objects do
+		local objectOccluded = (object :: any).occluded
+
+		if objectOccluded then
+			if objectOccluded(object, r, tMin, tMax) then
+				return true
+			end
+		elseif object:hit(r, tMin, tMax) then
+			return true
+		end
+	end
+
+	return false
+end
+
 function HittableList.boundingBox(self: HittableList): AABB.AABB
 	local objects = self.objects
 	local box = objects[1]:boundingBox()

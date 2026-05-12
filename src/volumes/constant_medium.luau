@@ -74,9 +74,14 @@ function ConstantMedium.hit(self: ConstantMedium, r: Ray.Ray, tMin: number, tMax
 		bitangent = vector.create(0, 1, 0),
 		frontFace = true,
 		material = self.phaseFunction,
+		materialCache = nil,
 		u = 0,
 		v = 0,
 	}
+end
+
+function ConstantMedium.occluded(self: ConstantMedium, r: Ray.Ray, tMin: number, tMax: number): boolean
+	return self:hit(r, tMin, tMax) ~= nil
 end
 
 function ConstantMedium.boundingBox(self: ConstantMedium): AABB.AABB

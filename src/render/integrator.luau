@@ -27,6 +27,16 @@ local function powerHeuristic(pdfA: number, pdfB: number): number
 	return a2 / sum
 end
 
+local function occluded(world: hittable.Hittable, ray: Ray.Ray, tMin: number, tMax: number): boolean
+	local worldOccluded = (world :: any).occluded
+
+	if worldOccluded then
+		return worldOccluded(world, ray, tMin, tMax)
+	end
+
+	return world:hit(ray, tMin, tMax) ~= nil
+end
+
 local function lightPdf(
 	sceneLights: { lights.Light }?,
 	samplers: hittable.Hittable?,
@@ -109,7 +119,7 @@ local function addDirectLighting(
 
 			local shadow = Ray.new(rec.p, sample.dir, ray.time, ray.wavelength)
 
-			if world:hit(shadow, 0.001, sample.distance - 0.001) then
+			if occluded(world, shadow, 0.001, sample.distance - 0.001) then
 				continue
 			end
 
@@ -134,9 +144,9 @@ local function addDirectLighting(
 
 		if pdf > 0 then
 			local shadow = Ray.new(rec.p, dir, ray.time, ray.wavelength)
-			local lightRec = world:hit(shadow, 0.001, math.huge)
+			local lightRec = (samplers :: any):hit(shadow, 0.001, math.huge)
 
-			if lightRec and lightRec.material.emitted then
+			if lightRec and lightRec.material.emitted and not occluded(world, shadow, 0.001, lightRec.t - 0.001) then
 				local emitted = (lightRec.material :: any):emitted(lightRec)
 				local brdfDensity = matProbability:value(dir)
 
@@ -155,7 +165,7 @@ local function addDirectLighting(
 		if sample.probability > 0 and maxComponent(sample.emitted) > 0 then
 			local shadow = Ray.new(rec.p, sample.dir, ray.time, ray.wavelength)
 
-			if not world:hit(shadow, 0.001, math.huge) then
+			if not occluded(world, shadow, 0.001, math.huge) then
 				local brdfDensity = matProbability:value(sample.dir)
 
 				if brdfDensity > 0 then

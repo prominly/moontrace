@@ -92,6 +92,30 @@ function Sphere.hit(self: Sphere, r: Ray.Ray, tMin: number, tMax: number): hitta
 	return hittable.makeHitRecord(r, root, p, outwardNormal, self.material, u, v, tangent, bitangent)
 end
 
+function Sphere.occluded(self: Sphere, r: Ray.Ray, tMin: number, tMax: number): boolean
+	local center = self.centerStart + r.time * self.centerVec
+	local oc = center - r.origin
+	local a = Vec3.lengthSquared(r.direction)
+	local h = Vec3.dot(r.direction, oc)
+	local c = Vec3.lengthSquared(oc) - self.radiusSquared
+	local discriminant = h * h - a * c
+
+	if discriminant < 0 then
+		return false
+	end
+
+	local sqrtd = math.sqrt(discriminant)
+	local root = (h - sqrtd) / a
+
+	if root > tMin and root < tMax then
+		return true
+	end
+
+	root = (h + sqrtd) / a
+
+	return root > tMin and root < tMax
+end
+
 function Sphere.boundingBox(self: Sphere): AABB.AABB
 	local r = vector.create(self.radius, self.radius, self.radius)
 	local box0 = AABB.new(self.centerStart - r, self.centerStart + r)

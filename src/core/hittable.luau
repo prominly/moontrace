@@ -25,10 +25,12 @@ export type HitRecord = {
 	v: number,
 	frontFace: boolean,
 	material: Material,
+	materialCache: any?,
 }
 
 export type Hittable = {
 	hit: (any, r: Ray.Ray, tMin: number, tMax: number) -> HitRecord?,
+	occluded: ((any, r: Ray.Ray, tMin: number, tMax: number) -> boolean)?,
 	boundingBox: (any) -> AABB.AABB,
 	probabilityValue: ((any, origin: Vec3.Point3, direction: Vec3.Vec3) -> number)?,
 	random: ((any, origin: Vec3.Point3) -> Vec3.Vec3)?,
@@ -57,6 +59,7 @@ function hittable.makeHitRecord(
 		bitangent = if frontFace then bitangent else -bitangent,
 		frontFace = frontFace,
 		material = material,
+		materialCache = nil,
 		u = u,
 		v = v,
 	}

@@ -97,6 +97,25 @@ function RotationY.hit(self: RotationY, r: Ray.Ray, tMin: number, tMax: number):
 	return rec
 end
 
+function RotationY.occluded(self: RotationY, r: Ray.Ray, tMin: number, tMax: number): boolean
+	local s = self.sinTheta
+	local c = self.cosTheta
+
+	local ox, oy, oz = r.origin.x, r.origin.y, r.origin.z
+	local dx, dy, dz = r.direction.x, r.direction.y, r.direction.z
+
+	local origin = vector.create(c * ox - s * oz, oy, s * ox + c * oz)
+	local direction = vector.create(c * dx - s * dz, dy, s * dx + c * dz)
+	local rotated = Ray.new(origin, direction, r.time, r.wavelength)
+	local objectOccluded = (self.object :: any).occluded
+
+	if objectOccluded then
+		return objectOccluded(self.object, rotated, tMin, tMax)
+	end
+
+	return self.object:hit(rotated, tMin, tMax) ~= nil
+end
+
 function RotationY.boundingBox(self: RotationY): AABB.AABB
 	return self.bbox
 end

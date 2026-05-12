@@ -6,6 +6,7 @@ local Ray = require("../core/ray")
 local hittable = require("../core/hittable")
 local lights = require("../lights")
 local backgroundMod = require("./background")
+local environmentMod = require("./environment")
 local spectrum = require("./spectrum")
 
 local integrator = {}
@@ -29,6 +30,7 @@ end
 local function lightPdf(
 	sceneLights: { lights.Light }?,
 	samplers: hittable.Hittable?,
+	sceneEnvironment: environmentMod.Environment?,
 	origin: vector,
 	direction: vector
 ): number
@@ -44,6 +46,10 @@ local function lightPdf(
 				pdf += (light :: any):probabilityValue(origin, direction)
 			end
 		end
+	end
+
+	if sceneEnvironment then
+		pdf += sceneEnvironment:probabilityValue(direction)
 	end
 
 	return pdf
@@ -83,7 +89,8 @@ local function addDirectLighting(
 	attenuation: vector,
 	world: hittable.Hittable,
 	sceneLights: { lights.Light }?,
-	samplers: hittable.Hittable?
+	samplers: hittable.Hittable?,
+	sceneEnvironment: environmentMod.Environment?
 ): vector
 	if not rec.material.evalDirect or not rec.material.probability or maxComponent(attenuation) <= 0.01 then
 		return vector.zero
@@ -142,6 +149,24 @@ local function addDirectLighting(
 		end
 	end
 
+	if sceneEnvironment then
+		local sample = sceneEnvironment:sample()
+
+		if sample.probability > 0 and maxComponent(sample.emitted) > 0 then
+			local shadow = Ray.new(rec.p, sample.dir, ray.time, ray.wavelength)
+
+			if not world:hit(shadow, 0.001, math.huge) then
+				local brdfDensity = matProbability:value(sample.dir)
+
+				if brdfDensity > 0 then
+					local weight = powerHeuristic(sample.probability, brdfDensity)
+					local f = (rec.material :: any):evalDirect(ray, rec, sample.dir)
+					accum += attenuation * f * sample.emitted * weight / sample.probability
+				end
+			end
+		end
+	end
+
 	return accum
 end
 
@@ -151,7 +176,8 @@ function integrator.rayColor(
 	world: hittable.Hittable,
 	background: backgroundMod.Background,
 	sceneLights: { lights.Light }?,
-	samplers: hittable.Hittable?
+	samplers: hittable.Hittable?,
+	sceneEnvironment: environmentMod.Environment?
 ): vector
 	local accum = vector.zero
 	local attenuation = vector.one
@@ -182,7 +208,14 @@ function integrator.rayColor(
 				return accum
 			end
 
-			return accum + attenuation * background(ray)
+			local emitted = if sceneEnvironment then sceneEnvironment:value(ray) else background(ray)
+			local weight = 1
+
+			if sceneEnvironment and depth > 1 and previousBsdfPdf > 0 then
+				weight = powerHeuristic(previousBsdfPdf, previousLightPdf)
+			end
+
+			return accum + attenuation * emitted * weight
 		end
 
 		if rec.material.emitted then
@@ -196,7 +229,7 @@ function integrator.rayColor(
 			accum += attenuation * emitted * weight
 		end
 
-		accum += addDirectLighting(ray, rec, attenuation, world, sceneLights, samplers)
+		accum += addDirectLighting(ray, rec, attenuation, world, sceneLights, samplers, sceneEnvironment)
 
 		local att, scattered = rec.material:scatter(ray, rec)
 
@@ -215,7 +248,7 @@ function integrator.rayColor(
 				return accum
 			end
 
-			previousLightPdf = lightPdf(sceneLights, samplers, rec.p, scattered.direction)
+			previousLightPdf = lightPdf(sceneLights, samplers, sceneEnvironment, rec.p, scattered.direction)
 		end
 
 		attenuation *= att

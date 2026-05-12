@@ -11,7 +11,7 @@ local HittableList = require("../core/hittable_list")
 local material = require("../materials")
 local textures = require("../textures")
 local lights = require("../lights")
-local background = require("../render/background")
+local environment = require("../render/environment")
 local types = require("./types")
 
 local showcase = {}
@@ -238,10 +238,19 @@ function showcase.build(): types.Scene
 			time0 = 0,
 			time1 = 1,
 		},
-		sky = background.sunset,
+		environment = environment.ProceduralSun.new({
+			toSun = Vec3.new(-0.6, 0.35, 0.7),
+			sunColor = Vec3.new(1.0, 0.56, 0.30),
+			sunIntensity = 20,
+			skyHorizon = Vec3.new(0.98, 0.52, 0.28),
+			skyZenith = Vec3.new(0.10, 0.08, 0.28),
+			groundColor = Vec3.new(0.025, 0.022, 0.028),
+			skyIntensity = 1.0,
+			sunAngleDegrees = 1.2,
+			sunWeight = 0.72,
+		}),
 		lights = {
 			lights.Point.new(Vec3.new(-12, 14, 6), Vec3.new(1.0, 0.55, 0.30), 90, 2.0),
-			lights.Directional.new(Vec3.new(-0.6, 0.35, 0.7), Vec3.new(1.0, 0.55, 0.30), 1.8),
 		},
 		samplers = lightSphere,
 	}

@@ -64,6 +64,7 @@ function worker.renderTile(args: {
 	})
 
 	local sky = scene.sky or background.gradientSky
+	local sceneEnvironment = scene.environment
 	local scale = camera.pixelSamplesScale
 
 	local pixelCount = (args.yEnd - args.yStart) * args.width
@@ -79,7 +80,15 @@ function worker.renderTile(args: {
 
 			local firstRay = camera:getRay(i, j, 1)
 			local a, n = integrator.firstHitGBuffer(firstRay, bvh)
-			pixelColor += integrator.rayColor(firstRay, args.depth, bvh, sky, scene.lights, scene.samplers)
+			pixelColor += integrator.rayColor(
+				firstRay,
+				args.depth,
+				bvh,
+				sky,
+				scene.lights,
+				scene.samplers,
+				sceneEnvironment
+			)
 
 			for sampleIndex = 2, args.samples do
 				pixelColor += integrator.rayColor(
@@ -88,7 +97,8 @@ function worker.renderTile(args: {
 					bvh,
 					sky,
 					scene.lights,
-					scene.samplers
+					scene.samplers,
+					sceneEnvironment
 				)
 			end
 

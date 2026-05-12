@@ -86,9 +86,13 @@ function RotationY.hit(self: RotationY, r: Ray.Ray, tMin: number, tMax: number):
 
 	local px, py, pz = rec.p.x, rec.p.y, rec.p.z
 	local nx, ny, nz = rec.normal.x, rec.normal.y, rec.normal.z
+	local tx, ty, tz = rec.tangent.x, rec.tangent.y, rec.tangent.z
+	local bx, by, bz = rec.bitangent.x, rec.bitangent.y, rec.bitangent.z
 
 	rec.p = vector.create(c * px + s * pz, py, -s * px + c * pz)
 	rec.normal = vector.create(c * nx + s * nz, ny, -s * nx + c * nz)
+	rec.tangent = vector.create(c * tx + s * tz, ty, -s * tx + c * tz)
+	rec.bitangent = vector.create(c * bx + s * bz, by, -s * bx + c * bz)
 
 	return rec
 end

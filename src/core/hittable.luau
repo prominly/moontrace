@@ -18,6 +18,8 @@ export type Material = {
 export type HitRecord = {
 	p: Vec3.Point3,
 	normal: Vec3.Vec3,
+	tangent: Vec3.Vec3,
+	bitangent: Vec3.Vec3,
 	t: number,
 	u: number,
 	v: number,
@@ -41,7 +43,9 @@ function hittable.makeHitRecord(
 	outwardNormal: Vec3.Vec3,
 	material: Material,
 	u: number,
-	v: number
+	v: number,
+	tangent: Vec3.Vec3,
+	bitangent: Vec3.Vec3
 ): HitRecord
 	local frontFace = Vec3.dot(r.direction, outwardNormal) < 0
 
@@ -49,6 +53,8 @@ function hittable.makeHitRecord(
 		t = t,
 		p = p,
 		normal = if frontFace then outwardNormal else -outwardNormal,
+		tangent = tangent,
+		bitangent = if frontFace then bitangent else -bitangent,
 		frontFace = frontFace,
 		material = material,
 		u = u,

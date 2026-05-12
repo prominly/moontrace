@@ -79,8 +79,17 @@ function Sphere.hit(self: Sphere, r: Ray.Ray, tMin: number, tMax: number): hitta
 	local phi = math.atan2(-outwardNormal.z, outwardNormal.x) + math.pi
 	local u = phi / (2 * math.pi)
 	local v = theta / math.pi
+	local tangent = vector.create(outwardNormal.z, 0, -outwardNormal.x)
 
-	return hittable.makeHitRecord(r, root, p, outwardNormal, self.material, u, v)
+	if Vec3.nearZero(tangent) then
+		tangent = vector.create(1, 0, 0)
+	else
+		tangent = vector.normalize(tangent)
+	end
+
+	local bitangent = vector.normalize(vector.cross(outwardNormal, tangent))
+
+	return hittable.makeHitRecord(r, root, p, outwardNormal, self.material, u, v, tangent, bitangent)
 end
 
 function Sphere.boundingBox(self: Sphere): AABB.AABB

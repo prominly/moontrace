@@ -90,7 +90,10 @@ function Quad.hit(self: Quad, r: Ray.Ray, tMin: number, tMax: number): hittable.
 		return nil
 	end
 
-	return hittable.makeHitRecord(r, t, p, self.normal, self.material, alpha, beta)
+	local tangent = vector.normalize(self.u)
+	local bitangent = vector.normalize(vector.cross(self.normal, tangent))
+
+	return hittable.makeHitRecord(r, t, p, self.normal, self.material, alpha, beta, tangent, bitangent)
 end
 
 function Quad.boundingBox(self: Quad): AABB.AABB

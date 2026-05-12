@@ -70,6 +70,8 @@ function ConstantMedium.hit(self: ConstantMedium, r: Ray.Ray, tMin: number, tMax
 		t = t,
 		p = Ray.at(r, t),
 		normal = vector.create(1, 0, 0),
+		tangent = vector.create(0, 0, 1),
+		bitangent = vector.create(0, 1, 0),
 		frontFace = true,
 		material = self.phaseFunction,
 		u = 0,

@@ -31,6 +31,8 @@ export type PBR = typeof(setmetatable(
 		roughness: number,
 		roughnessTexture: textureTypes.Texture?,
 		normalTexture: textureTypes.Texture?,
+		bumpTexture: textureTypes.Texture?,
+		bumpStrength: number,
 	},
 	PBR
 ))
@@ -38,6 +40,8 @@ export type PBR = typeof(setmetatable(
 local DIELECTRIC_F0 = vector.create(0.04, 0.04, 0.04)
 local MIN_ROUGHNESS = 0.02
 local EPS = 1e-6
+local BUMP_UV_STEP = 0.001
+local BUMP_POSITION_STEP = 0.01
 
 local function maxComponent(v: vector): number
 	return math.max(v.x, v.y, v.z)
@@ -132,7 +136,13 @@ local function scalarValue(texture: textureTypes.Texture?, fallback: number, rec
 	return fallback
 end
 
-local function mappedNormal(texture: textureTypes.Texture?, rec: hittable.HitRecord): vector
+local function heightValue(texture: textureTypes.Texture, u: number, v: number, p: vector): number
+	local h = texture:value(u, v, p)
+
+	return 0.2126 * h.x + 0.7152 * h.y + 0.0722 * h.z
+end
+
+local function normalFromMap(texture: textureTypes.Texture?, rec: hittable.HitRecord): vector
 	if not texture then
 		return rec.normal
 	end
@@ -144,7 +154,10 @@ local function mappedNormal(texture: textureTypes.Texture?, rec: hittable.HitRec
 		return rec.normal
 	end
 
-	local n = vector.normalize(ONB.new(rec.normal):transform(vector.normalize(tangentNormal)))
+	tangentNormal = vector.normalize(tangentNormal)
+
+	local n =
+		vector.normalize(rec.tangent * tangentNormal.x + rec.bitangent * tangentNormal.y + rec.normal * tangentNormal.z)
 	if vector.dot(n, rec.normal) <= EPS then
 		return rec.normal
 	end
@@ -152,12 +165,48 @@ local function mappedNormal(texture: textureTypes.Texture?, rec: hittable.HitRec
 	return n
 end
 
+local function bumpedNormal(
+	texture: textureTypes.Texture?,
+	strength: number,
+	baseNormal: vector,
+	rec: hittable.HitRecord
+): vector
+	if not texture or strength <= 0 then
+		return baseNormal
+	end
+
+	local u = rec.u
+	local v = rec.v
+	local p = rec.p
+
+	local tangent = rec.tangent
+	local bitangent = rec.bitangent
+
+	local hU0 = heightValue(texture, u - BUMP_UV_STEP, v, p - tangent * BUMP_POSITION_STEP)
+	local hU1 = heightValue(texture, u + BUMP_UV_STEP, v, p + tangent * BUMP_POSITION_STEP)
+	local hV0 = heightValue(texture, u, v - BUMP_UV_STEP, p - bitangent * BUMP_POSITION_STEP)
+	local hV1 = heightValue(texture, u, v + BUMP_UV_STEP, p + bitangent * BUMP_POSITION_STEP)
+
+	local dU = hU1 - hU0
+	local dV = hV1 - hV0
+
+	local n = vector.normalize(baseNormal - strength * (dU * tangent + dV * bitangent))
+
+	if vector.dot(n, rec.normal) <= EPS then
+		return baseNormal
+	end
+
+	return n
+end
+
 local function surfaceAt(self: PBR, rec: hittable.HitRecord): Surface
+	local normal = normalFromMap(self.normalTexture, rec)
+
 	return {
 		albedo = self.texture:value(rec.u, rec.v, rec.p),
 		metallic = scalarValue(self.metallicTexture, self.metallic, rec),
 		roughness = math.max(MIN_ROUGHNESS, scalarValue(self.roughnessTexture, self.roughness, rec)),
-		normal = mappedNormal(self.normalTexture, rec),
+		normal = bumpedNormal(self.bumpTexture, self.bumpStrength, normal, rec),
 	}
 end
 
@@ -196,10 +245,12 @@ local function evaluateSurface(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord,
 	local albedo = surface.albedo
 	local metallic = surface.metallic
 	local alpha = alphaFor(surface.roughness)
+
 	local f0 = f0For(albedo, metallic)
 	local f = fresnelSchlick(vDotH, f0)
 	local d = ggxD(nDotH, alpha)
 	local g = smithG1(nDotL, alpha) * smithG1(nDotV, alpha)
+
 	local specular = f * (d * g / math.max(EPS, 4 * nDotL * nDotV))
 	local diffuse = (vector.one - f) * (1 - metallic) * albedo / math.pi
 
@@ -256,7 +307,9 @@ function PBR.new(
 	albedo: vector | textureTypes.Texture,
 	metallic: ScalarInput?,
 	roughness: ScalarInput?,
-	normalMap: textureTypes.Texture?
+	normalMap: textureTypes.Texture?,
+	bumpMap: textureTypes.Texture?,
+	bumpStrength: number?
 ): hittable.Material
 	local metallicValue, metallicTexture = scalarInput(metallic, 0)
 	local roughnessValue, roughnessTexture = scalarInput(roughness, 0.5)
@@ -268,6 +321,8 @@ function PBR.new(
 		roughness = math.max(MIN_ROUGHNESS, roughnessValue),
 		roughnessTexture = roughnessTexture,
 		normalTexture = normalMap,
+		bumpTexture = bumpMap,
+		bumpStrength = math.max(0, bumpStrength or 0.05),
 	}, PBR) :: any
 end
 

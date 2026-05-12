@@ -17,7 +17,7 @@ This project requires the `Lute` runtime. You can find the local setup instructi
 Before rendering the scene, you may want to adjust the sample count. This can be done by passing it as a positional numeric argument when launching the program.
 
 Performance depends on your hardware, but 10 samples per pixel shouldn't take more than a minute at the moment.
-> _the render above took 500 samples per pixel._
+> _the render above took 100 samples per pixel._
 
 Launch:
 ```sh

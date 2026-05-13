@@ -20,6 +20,7 @@ export type Quad = typeof(setmetatable(
 		D: number,
 		material: hittable.Material,
 		bbox: AABB.AABB,
+		area: number,
 	},
 	Quad
 ))
@@ -65,6 +66,7 @@ function Quad.new(Q: Vec3.Point3, u: Vec3.Vec3, v: Vec3.Vec3, material: hittable
 		D = D,
 		material = material,
 		bbox = paddedBox(Q, Q + u, Q + v, Q + u + v),
+		area = vector.magnitude(n),
 	}, Quad) :: any
 end
 
@@ -119,6 +121,29 @@ end
 
 function Quad.boundingBox(self: Quad): AABB.AABB
 	return self.bbox
+end
+
+function Quad.probabilityValue(self: Quad, origin: Vec3.Point3, direction: Vec3.Vec3): number
+	local rec = self:hit(Ray.new(origin, direction, 0), 0.001, math.huge)
+	if not rec then
+		return 0
+	end
+
+	local toHit = rec.p - origin
+	local distanceSquared = Vec3.lengthSquared(toHit)
+	local cosine = math.abs(vector.dot(direction, rec.normal) / vector.magnitude(direction))
+
+	if cosine <= 0 then
+		return 0
+	end
+
+	return distanceSquared / (cosine * self.area)
+end
+
+function Quad.random(self: Quad, origin: Vec3.Point3): Vec3.Vec3
+	local p = self.Q + math.random() * self.u + math.random() * self.v
+
+	return p - origin
 end
 
 return Quad

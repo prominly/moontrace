@@ -39,7 +39,12 @@ function Lambertian.probability(_self: Lambertian, _rIn: Ray.Ray, rec: hittable.
 end
 
 function Lambertian.evalDirect(self: Lambertian, _rIn: Ray.Ray, rec: hittable.HitRecord, wi: Vec3.Vec3): vector
-	local cosTheta = math.max(0, vector.dot(rec.normal, wi))
+	if Vec3.lengthSquared(wi) <= 1e-12 then
+		return vector.zero
+	end
+
+	local dir = vector.normalize(wi)
+	local cosTheta = math.max(0, vector.dot(rec.normal, dir))
 
 	return self.texture:value(rec.u, rec.v, rec.p) * cosTheta / math.pi
 end

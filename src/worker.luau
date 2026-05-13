@@ -37,7 +37,7 @@ function worker.renderTile(args: {
 	rngSeed: number,
 	aspectRatio: number,
 	scene: string,
-	denoise: boolean,
+	aovs: boolean,
 }): TileResult
 	local builder = scenes[args.scene]
 	if not builder then
@@ -71,8 +71,8 @@ function worker.renderTile(args: {
 	local pixelCount = (args.yEnd - args.yStart) * args.width
 	local byteSize = pixelCount * 12
 	local colorBuf = buffer.create(byteSize)
-	local albedoBuf: buffer? = if args.denoise then buffer.create(byteSize) else nil
-	local normalBuf: buffer? = if args.denoise then buffer.create(byteSize) else nil
+	local albedoBuf: buffer? = if args.aovs then buffer.create(byteSize) else nil
+	local normalBuf: buffer? = if args.aovs then buffer.create(byteSize) else nil
 
 	local offset = 0
 	for j = args.yStart, args.yEnd - 1 do
@@ -82,7 +82,7 @@ function worker.renderTile(args: {
 			local firstRay = camera:getRay(i, j, 1)
 			local firstAlbedo = vector.zero
 			local firstNormal = vector.zero
-			if args.denoise then
+			if args.aovs then
 				firstAlbedo, firstNormal = integrator.firstHitGBuffer(firstRay, bvh)
 			end
 
@@ -113,7 +113,7 @@ function worker.renderTile(args: {
 			buffer.writef32(colorBuf, offset + 4, pixelColor.y)
 			buffer.writef32(colorBuf, offset + 8, pixelColor.z)
 
-			if args.denoise then
+			if args.aovs then
 				local ab = albedoBuf :: buffer
 				local nb = normalBuf :: buffer
 

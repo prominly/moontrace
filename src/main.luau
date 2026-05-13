@@ -10,14 +10,8 @@ local fs = require("@std/fs")
 local ppm = require("./render/ppm")
 local pfm = require("./render/pfm")
 local denoise = require("./render/denoise")
+local renderOptions = require("./cli/render_options")
 
-local WIDTH = 1200
-local HEIGHT = math.max(1, math.floor(WIDTH / (16 / 9)))
-local SAMPLES = 1
-local DEPTH = 50
-local SCENE_SEED = 1
-local SCENE = "showcase"
-local THREADS = system.threadCount()
 local TILE_HEIGHT = 8
 
 local TEXTURE_PATHS = {
@@ -27,12 +21,25 @@ local TEXTURE_PATHS = {
 
 type OutputFormat = "ppm" | "pfm"
 
-local function parseOutputFormat(value: string?): OutputFormat
-	if value == "ppm" or value == "pfm" then
-		return value
+local function parentDirectory(path: string): string?
+	for i = #path, 1, -1 do
+		if string.sub(path, i, i) == "/" then
+			if i == 1 then
+				return "/"
+			end
+
+			return string.sub(path, 1, i - 1)
+		end
 	end
 
-	error("expected --format to be 'ppm' or 'pfm', got " .. tostring(value))
+	return nil
+end
+
+local function ensureParentDirectory(path: string)
+	local parent = parentDirectory(path)
+	if parent and parent ~= "/" then
+		fs.createDirectory(parent, { makeParents = true })
+	end
 end
 
 local function writeLinearImage(
@@ -43,27 +50,50 @@ local function writeLinearImage(
 	pixels: { vector }
 )
 	if format == "pfm" then
-		pfm.writeLinearPfm(pathBase .. ".pfm", width, height, pixels)
+		local path = pathBase .. ".pfm"
+		ensureParentDirectory(path)
+		pfm.writeLinearPfm(path, width, height, pixels)
 	else
-		ppm.writeLinearPpm(pathBase .. ".ppm", width, height, pixels)
+		local path = pathBase .. ".ppm"
+		ensureParentDirectory(path)
+		ppm.writeLinearPpm(path, width, height, pixels)
 	end
 end
 
--- args
-local samplesPerPixel = tonumber(process.args[2])
-if not samplesPerPixel or samplesPerPixel < 1 or samplesPerPixel % 1 ~= 0 then
-	samplesPerPixel = SAMPLES
+local parsed = renderOptions.parse(process.args, system.threadCount())
+if parsed.help then
+	print(renderOptions.usage())
+	process.exit(0)
 end
 
-local denoiseEnabled = false
-local outputFormat: OutputFormat = "ppm"
-for index, arg in process.args do
-	if arg == "--denoise" then
-		denoiseEnabled = true
-	elseif arg == "--format" then
-		outputFormat = parseOutputFormat(process.args[index + 1])
-	end
-end
+local options = parsed.options :: any
+local collectAovs = options.aovs or options.denoise
+
+local settingsBody = string.format(
+	[[settings:
+  scene:   %s
+  size:    %dx%d
+  spp:     %d
+  depth:   %d
+  threads: %d
+  format:  %s
+  out:     %s
+  aovs:    %s
+  denoise: %s
+  ]],
+	options.scene,
+	options.width,
+	options.height,
+	options.samples,
+	options.depth,
+	options.threads,
+	options.outputFormat,
+	options.outputBase,
+	tostring(options.aovs),
+	tostring(options.denoise)
+)
+
+print(settingsBody)
 
 -- spawn
 local tSpawnStart = os.clock()
@@ -80,7 +110,7 @@ for _, path in TEXTURE_PATHS do
 end
 
 local workers = {}
-for i = 1, THREADS do
+for i = 1, options.threads do
 	workers[i] = vm.create("./worker")
 	for _, t in loaded do
 		workers[i].preloadTexture(t.path, t.data)
@@ -92,8 +122,8 @@ local tSpawn = os.clock() - tSpawnStart
 local tRenderStart = os.clock()
 
 local tiles = {}
-for yStart = 0, HEIGHT - 1, TILE_HEIGHT do
-	tiles[#tiles + 1] = { yStart = yStart, yEnd = math.min(yStart + TILE_HEIGHT, HEIGHT) }
+for yStart = 0, options.height - 1, TILE_HEIGHT do
+	tiles[#tiles + 1] = { yStart = yStart, yEnd = math.min(yStart + TILE_HEIGHT, options.height) }
 end
 local tileCount = #tiles
 
@@ -101,7 +131,7 @@ local results = {}
 local nextTile = 1
 local tilesDone = 0
 
-for w = 1, THREADS do
+for w = 1, options.threads do
 	local workerIndex = w
 	task.spawn(function()
 		while nextTile <= tileCount do
@@ -110,16 +140,16 @@ for w = 1, THREADS do
 
 			local tile = tiles[currentTile]
 			results[currentTile] = workers[workerIndex].renderTile({
-				width = WIDTH,
-				samples = samplesPerPixel,
-				depth = DEPTH,
+				width = options.width,
+				samples = options.samples,
+				depth = options.depth,
 				yStart = tile.yStart,
 				yEnd = tile.yEnd,
-				sceneSeed = SCENE_SEED,
-				rngSeed = currentTile + 100,
-				aspectRatio = 16 / 9,
-				scene = SCENE,
-				denoise = denoiseEnabled,
+				sceneSeed = options.sceneSeed,
+				rngSeed = options.rngSeed + currentTile,
+				aspectRatio = options.aspectRatio,
+				scene = options.scene,
+				aovs = collectAovs,
 			})
 			tilesDone += 1
 		end
@@ -133,25 +163,25 @@ end
 local tRender = os.clock() - tRenderStart
 
 -- assembly
-local pixelCount = WIDTH * HEIGHT
+local pixelCount = options.width * options.height
 local color = table.create(pixelCount) :: { vector }
-local albedo = (if denoiseEnabled then table.create(pixelCount) else {}) :: { vector }
-local normal = (if denoiseEnabled then table.create(pixelCount) else {}) :: { vector }
+local albedo = (if collectAovs then table.create(pixelCount) else {}) :: { vector }
+local normal = (if collectAovs then table.create(pixelCount) else {}) :: { vector }
 
 local cursor = 1
 for t = 1, tileCount do
 	local r = results[t]
 	local offset = 0
 	local cb = buffer.fromstring(r.color)
-	local ab: buffer? = if denoiseEnabled then buffer.fromstring(r.albedo) else nil
-	local nb: buffer? = if denoiseEnabled then buffer.fromstring(r.normal) else nil
+	local ab: buffer? = if collectAovs then buffer.fromstring(r.albedo) else nil
+	local nb: buffer? = if collectAovs then buffer.fromstring(r.normal) else nil
 	local tilePixels = buffer.len(cb) // 12
 
 	for _ = 1, tilePixels do
 		color[cursor] =
 			vector.create(buffer.readf32(cb, offset), buffer.readf32(cb, offset + 4), buffer.readf32(cb, offset + 8))
 
-		if denoiseEnabled then
+		if collectAovs then
 			local albedoBuf = ab :: buffer
 			local normalBuf = nb :: buffer
 
@@ -174,21 +204,25 @@ end
 
 -- write
 local tWriteStart = os.clock()
-writeLinearImage("image", outputFormat, WIDTH, HEIGHT, color)
+writeLinearImage(options.outputBase, options.outputFormat, options.width, options.height, color)
+if options.aovs then
+	pfm.writeLinearPfm(options.outputBase .. "_albedo.pfm", options.width, options.height, albedo)
+	pfm.writeLinearPfm(options.outputBase .. "_normal.pfm", options.width, options.height, normal)
+end
 local tWrite = os.clock() - tWriteStart
 
 -- denoise
 local tDenoise = 0
-if denoiseEnabled then
+if options.denoise then
 	local tDenoiseStart = os.clock()
-	local denoised = denoise.atrous(color, albedo, normal, WIDTH, HEIGHT)
+	local denoised = denoise.atrous(color, albedo, normal, options.width, options.height)
 	tDenoise = os.clock() - tDenoiseStart
 
-	writeLinearImage("image_denoised", outputFormat, WIDTH, HEIGHT, denoised)
+	writeLinearImage(options.outputBase .. "_denoised", options.outputFormat, options.width, options.height, denoised)
 end
 
 -- stats
-if denoiseEnabled then
+if options.denoise then
 	print(
 		string.format(
 			"spawn: %.3fs  render: %.3fs  write: %.3fs  denoise: %.3fs  total: %.3fs",

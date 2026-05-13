@@ -29,6 +29,7 @@ export type RenderOptions = {
 	outputFormat: OutputFormat,
 	denoise: boolean,
 	aovs: boolean,
+	preview: boolean,
 }
 
 export type ParseResult = {
@@ -53,7 +54,8 @@ Options:
       --threads <n>        Worker VM count. Default: host thread count
   -o, --out <path>         Output base path. Default: image
       --output <path>      Alias for --out
-      --format <ppm|pfm>   Color output format. Default: ppm, or inferred from --out
+      --format <ppm|pfm>   Color output format. Default: ppm, or inferred from --out.
+                           PFM output also writes <out>_preview.ppm.
       --aovs               Write albedo and normal AOV PFM files
       --denoise            Run the built-in guided A-Trous denoiser
   -h, --help               Print this help.
@@ -256,6 +258,7 @@ function renderOptions.parse(args: { string }, defaultThreads: number): ParseRes
 			outputFormat = outputFormat,
 			denoise = denoiseEnabled,
 			aovs = aovsEnabled,
+			preview = outputFormat == "pfm",
 		},
 	}
 end

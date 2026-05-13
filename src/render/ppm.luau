@@ -16,7 +16,7 @@ function ppm.formatPixel(pixel: vector): string
 	)
 end
 
-function ppm.writeLinearPpm(path: string, width: number, height: number, pixels: { vector })
+function ppm.writeFile(path: string, width: number, height: number, pixels: { vector })
 	local chunks = table.create(#pixels + 1)
 	chunks[1] = string.format("P3\n%d %d\n255\n", width, height)
 

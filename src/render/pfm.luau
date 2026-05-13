@@ -7,7 +7,7 @@ local fs = require("@std/fs")
 -- https://www.pauldebevec.com/Research/HDR/PFM
 local pfm = {}
 
-function pfm.writeLinearPfm(path: string, width: number, height: number, pixels: { vector })
+function pfm.writeFile(path: string, width: number, height: number, pixels: { vector })
 	local pixelCount = width * height
 	if #pixels ~= pixelCount then
 		error(string.format("PFM pixel count mismatch: got %d, expected %d", #pixels, pixelCount))

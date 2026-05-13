@@ -42,7 +42,7 @@ local function ensureParentDirectory(path: string)
 	end
 end
 
-local function writeLinearImage(
+local function writeColorImage(
 	pathBase: string,
 	format: OutputFormat,
 	width: number,
@@ -52,12 +52,18 @@ local function writeLinearImage(
 	if format == "pfm" then
 		local path = pathBase .. ".pfm"
 		ensureParentDirectory(path)
-		pfm.writeLinearPfm(path, width, height, pixels)
+		pfm.writeFile(path, width, height, pixels)
 	else
 		local path = pathBase .. ".ppm"
 		ensureParentDirectory(path)
-		ppm.writeLinearPpm(path, width, height, pixels)
+		ppm.writeFile(path, width, height, pixels)
 	end
+end
+
+local function writePreviewImage(pathBase: string, width: number, height: number, pixels: { vector })
+	local path = pathBase .. ".ppm"
+	ensureParentDirectory(path)
+	ppm.writeFile(path, width, height, pixels)
 end
 
 local parsed = renderOptions.parse(process.args, system.threadCount())
@@ -66,7 +72,11 @@ if parsed.help then
 	process.exit(0)
 end
 
-local options = parsed.options :: any
+local options = parsed.options
+if not options then
+	error("render options missing")
+end
+
 local collectAovs = options.aovs or options.denoise
 
 local settingsBody = string.format(
@@ -78,6 +88,7 @@ local settingsBody = string.format(
   threads: %d
   format:  %s
   out:     %s
+  preview: %s
   aovs:    %s
   denoise: %s
   ]],
@@ -89,6 +100,7 @@ local settingsBody = string.format(
 	options.threads,
 	options.outputFormat,
 	options.outputBase,
+	tostring(options.preview),
 	tostring(options.aovs),
 	tostring(options.denoise)
 )
@@ -204,10 +216,13 @@ end
 
 -- write
 local tWriteStart = os.clock()
-writeLinearImage(options.outputBase, options.outputFormat, options.width, options.height, color)
+writeColorImage(options.outputBase, options.outputFormat, options.width, options.height, color)
+if options.preview then
+	writePreviewImage(options.outputBase .. "_preview", options.width, options.height, color)
+end
 if options.aovs then
-	pfm.writeLinearPfm(options.outputBase .. "_albedo.pfm", options.width, options.height, albedo)
-	pfm.writeLinearPfm(options.outputBase .. "_normal.pfm", options.width, options.height, normal)
+	writeColorImage(options.outputBase .. "_albedo", "pfm", options.width, options.height, albedo)
+	writeColorImage(options.outputBase .. "_normal", "pfm", options.width, options.height, normal)
 end
 local tWrite = os.clock() - tWriteStart
 
@@ -218,7 +233,7 @@ if options.denoise then
 	local denoised = denoise.atrous(color, albedo, normal, options.width, options.height)
 	tDenoise = os.clock() - tDenoiseStart
 
-	writeLinearImage(options.outputBase .. "_denoised", options.outputFormat, options.width, options.height, denoised)
+	writeColorImage(options.outputBase .. "_denoised", options.outputFormat, options.width, options.height, denoised)
 end
 
 -- stats

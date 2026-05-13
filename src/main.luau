@@ -8,6 +8,7 @@ local system = require("@lute/system")
 local process = require("@std/process")
 local fs = require("@std/fs")
 local ppm = require("./render/ppm")
+local pfm = require("./render/pfm")
 local denoise = require("./render/denoise")
 
 local WIDTH = 1200
@@ -24,6 +25,30 @@ local TEXTURE_PATHS = {
 	"assets/textures/earth_texture.ppm",
 }
 
+type OutputFormat = "ppm" | "pfm"
+
+local function parseOutputFormat(value: string?): OutputFormat
+	if value == "ppm" or value == "pfm" then
+		return value
+	end
+
+	error("expected --format to be 'ppm' or 'pfm', got " .. tostring(value))
+end
+
+local function writeLinearImage(
+	pathBase: string,
+	format: OutputFormat,
+	width: number,
+	height: number,
+	pixels: { vector }
+)
+	if format == "pfm" then
+		pfm.writeLinearPfm(pathBase .. ".pfm", width, height, pixels)
+	else
+		ppm.writeLinearPpm(pathBase .. ".ppm", width, height, pixels)
+	end
+end
+
 -- args
 local samplesPerPixel = tonumber(process.args[2])
 if not samplesPerPixel or samplesPerPixel < 1 or samplesPerPixel % 1 ~= 0 then
@@ -31,10 +56,12 @@ if not samplesPerPixel or samplesPerPixel < 1 or samplesPerPixel % 1 ~= 0 then
 end
 
 local denoiseEnabled = false
-for _, arg in process.args do
+local outputFormat: OutputFormat = "ppm"
+for index, arg in process.args do
 	if arg == "--denoise" then
 		denoiseEnabled = true
-		break
+	elseif arg == "--format" then
+		outputFormat = parseOutputFormat(process.args[index + 1])
 	end
 end
 
@@ -147,7 +174,7 @@ end
 
 -- write
 local tWriteStart = os.clock()
-ppm.writeLinearPpm("image.ppm", WIDTH, HEIGHT, color)
+writeLinearImage("image", outputFormat, WIDTH, HEIGHT, color)
 local tWrite = os.clock() - tWriteStart
 
 -- denoise
@@ -157,7 +184,7 @@ if denoiseEnabled then
 	local denoised = denoise.atrous(color, albedo, normal, WIDTH, HEIGHT)
 	tDenoise = os.clock() - tDenoiseStart
 
-	ppm.writeLinearPpm("image_denoised.ppm", WIDTH, HEIGHT, denoised)
+	writeLinearImage("image_denoised", outputFormat, WIDTH, HEIGHT, denoised)
 end
 
 -- stats

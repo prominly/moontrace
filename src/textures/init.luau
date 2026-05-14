@@ -5,6 +5,7 @@
 local Solid = require("@self/solid")
 local Image = require("@self/image")
 local Noise = require("@self/perlin")
+local Checker = require("@self/checker")
 local types = require("@self/types")
 
 local function loadOrDefault(path: string, fallback: vector): types.Texture
@@ -35,6 +36,7 @@ return {
 	Solid = Solid,
 	Image = Image,
 	Noise = Noise,
+	Checker = Checker,
 	loadOrDefault = loadOrDefault,
 	loadLinearOrDefault = loadLinearOrDefault,
 	loadSrgbOrDefault = loadSrgbOrDefault,

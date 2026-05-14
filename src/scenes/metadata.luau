@@ -33,6 +33,11 @@ local metadata: { [string]: SceneMetadata } = {
 		defaultDepth = DEFAULT_DEPTH,
 		defaultSceneSeed = DEFAULT_SCENE_SEED,
 	},
+	["checker"] = {
+		aspectRatio = 1,
+		defaultDepth = DEFAULT_DEPTH,
+		defaultSceneSeed = DEFAULT_SCENE_SEED,
+	},
 }
 
 return metadata

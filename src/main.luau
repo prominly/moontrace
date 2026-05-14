@@ -78,6 +78,10 @@ if not options then
 	error("render options missing")
 end
 
+if not sceneMetadata[options.scene] then
+	error("unknown scene: " .. options.scene)
+end
+
 local collectAovs = options.aovs or options.denoise
 
 local settingsBody = string.format(

@@ -38,6 +38,11 @@ local metadata: { [string]: SceneMetadata } = {
 		defaultDepth = DEFAULT_DEPTH,
 		defaultSceneSeed = DEFAULT_SCENE_SEED,
 	},
+	["glossy"] = {
+		aspectRatio = 1,
+		defaultDepth = DEFAULT_DEPTH,
+		defaultSceneSeed = DEFAULT_SCENE_SEED,
+	},
 }
 
 return metadata

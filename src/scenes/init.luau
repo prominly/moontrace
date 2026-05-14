@@ -8,6 +8,7 @@ local showcase = require("@self/showcase")
 local cornellBox = require("@self/cornell_box")
 local prism = require("@self/prism")
 local checker = require("@self/checker")
+local glossy = require("@self/glossy")
 
 local scenes: { [string]: types.Builder } = {
 	["default"] = default.build,
@@ -15,6 +16,7 @@ local scenes: { [string]: types.Builder } = {
 	["cornell-box"] = cornellBox.build,
 	["prism"] = prism.build,
 	["checker"] = checker.build,
+	["glossy"] = glossy.build,
 }
 
 return scenes

@@ -19,6 +19,8 @@ export type OutputFormat = "ppm" | "pfm"
 
 export type SceneMetadata = {
 	aspectRatio: number?,
+	defaultDepth: number?,
+	defaultSceneSeed: number?,
 }
 
 export type MetadataByScene = {
@@ -57,9 +59,9 @@ Options:
       --samples <n>        Alias for --spp
       --width <px>         Image width. Default: 1200 at 16:9, adjusted for scene aspect
       --height <px>        Image height. Default: width / aspect
-      --aspect <ratio>     Aspect ratio as a number or W:H. Default: scene default or 16:9
-      --depth <n>          Maximum path depth. Default: 50
-      --scene-seed <n>     Seed used while building randomized scenes. Default: 1
+      --aspect <ratio>     Aspect ratio as a number or W:H. Default: from scene metadata, otherwise 16:9
+      --depth <n>          Maximum path depth. Default: from scene metadata, otherwise 50
+      --scene-seed <n>     Seed used while building randomized scenes. Default: from scene metadata, otherwise 1
       --rng-seed <n>       Base seed used for tile sampling. Default: 100
       --threads <n>        Worker VM count. Default: host thread count
   -o, --out <path>         Output base path. Default: image
@@ -168,17 +170,12 @@ local function normalizeOutputBase(
 	return base, outputFormat
 end
 
-local function getSceneAspectRatio(sceneName: string, metadataByScene: MetadataByScene?): number?
+local function getSceneMetadata(sceneName: string, metadataByScene: MetadataByScene?): SceneMetadata?
 	if not metadataByScene then
 		return nil
 	end
 
-	local sceneMetadata = metadataByScene[sceneName]
-	if not sceneMetadata then
-		return nil
-	end
-
-	return sceneMetadata.aspectRatio
+	return metadataByScene[sceneName]
 end
 
 local function resolveTargetAspectRatio(
@@ -190,9 +187,9 @@ local function resolveTargetAspectRatio(
 		return requestedAspectRatio
 	end
 
-	local sceneAspectRatio = getSceneAspectRatio(sceneName, metadataByScene)
-	if sceneAspectRatio then
-		return sceneAspectRatio
+	local sceneMetadata = getSceneMetadata(sceneName, metadataByScene)
+	if sceneMetadata and sceneMetadata.aspectRatio then
+		return sceneMetadata.aspectRatio
 	end
 
 	return DEFAULT_ASPECT_RATIO
@@ -214,7 +211,9 @@ function renderOptions.parse(args: { string }, defaultThreads: number, metadataB
 	local aspectExplicit = false
 	local samples = DEFAULT_SAMPLES
 	local depth = DEFAULT_DEPTH
+	local depthExplicit = false
 	local sceneSeed = DEFAULT_SCENE_SEED
+	local sceneSeedExplicit = false
 	local rngSeed = DEFAULT_RNG_SEED
 	local scene = DEFAULT_SCENE
 	local threads = math.max(1, defaultThreads)
@@ -250,9 +249,11 @@ function renderOptions.parse(args: { string }, defaultThreads: number, metadataB
 			index += 1
 		elseif arg == "--depth" then
 			depth = parsePositiveInteger(requireValue(args, index, arg), arg)
+			depthExplicit = true
 			index += 1
 		elseif arg == "--scene-seed" then
 			sceneSeed = parseInteger(requireValue(args, index, arg), arg)
+			sceneSeedExplicit = true
 			index += 1
 		elseif arg == "--rng-seed" then
 			rngSeed = parseInteger(requireValue(args, index, arg), arg)
@@ -289,7 +290,17 @@ function renderOptions.parse(args: { string }, defaultThreads: number, metadataB
 		error("use either --height or --aspect, not both")
 	end
 
+	local sceneMetadata = getSceneMetadata(scene, metadataByScene)
+	if not depthExplicit and sceneMetadata and sceneMetadata.defaultDepth then
+		depth = sceneMetadata.defaultDepth
+	end
+
+	if not sceneSeedExplicit and sceneMetadata and sceneMetadata.defaultSceneSeed then
+		sceneSeed = sceneMetadata.defaultSceneSeed
+	end
+
 	local targetAspectRatio = resolveTargetAspectRatio(requestedAspectRatio, scene, metadataByScene)
+
 	local resolvedWidth = width
 	if not widthExplicit and not height then
 		resolvedWidth = defaultWidthForAspectRatio(targetAspectRatio)

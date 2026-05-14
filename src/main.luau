@@ -11,6 +11,7 @@ local ppm = require("./render/ppm")
 local pfm = require("./render/pfm")
 local denoise = require("./render/denoise")
 local renderOptions = require("./cli/render_options")
+local sceneMetadata = require("./scenes/metadata")
 
 local TILE_HEIGHT = 8
 
@@ -66,7 +67,7 @@ local function writePreviewImage(pathBase: string, width: number, height: number
 	ppm.writeFile(path, width, height, pixels)
 end
 
-local parsed = renderOptions.parse(process.args, system.threadCount())
+local parsed = renderOptions.parse(process.args, system.threadCount(), sceneMetadata)
 if parsed.help then
 	print(renderOptions.usage())
 	process.exit(0)
@@ -83,6 +84,7 @@ local settingsBody = string.format(
 	[[settings:
   scene:   %s
   size:    %dx%d
+  aspect:  %.3f
   spp:     %d
   depth:   %d
   threads: %d
@@ -95,6 +97,7 @@ local settingsBody = string.format(
 	options.scene,
 	options.width,
 	options.height,
+	options.aspectRatio,
 	options.samples,
 	options.depth,
 	options.threads,

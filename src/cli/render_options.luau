@@ -6,6 +6,8 @@ local renderOptions = {}
 
 local DEFAULT_WIDTH = 1200
 local DEFAULT_ASPECT_RATIO = 16 / 9
+local DEFAULT_HEIGHT = math.floor(DEFAULT_WIDTH / DEFAULT_ASPECT_RATIO)
+local DEFAULT_PIXEL_COUNT = DEFAULT_WIDTH * DEFAULT_HEIGHT
 local DEFAULT_SAMPLES = 1
 local DEFAULT_DEPTH = 50
 local DEFAULT_SCENE_SEED = 1
@@ -14,6 +16,14 @@ local DEFAULT_SCENE = "showcase"
 local DEFAULT_OUTPUT_BASE = "image"
 
 export type OutputFormat = "ppm" | "pfm"
+
+export type SceneMetadata = {
+	aspectRatio: number?,
+}
+
+export type MetadataByScene = {
+	[string]: SceneMetadata,
+}
 
 export type RenderOptions = {
 	width: number,
@@ -45,9 +55,9 @@ Options:
       --scene <name>       Scene name. Default: showcase
       --spp <n>            Samples per pixel. Default: 1
       --samples <n>        Alias for --spp
-      --width <px>         Image width. Default: 1200
+      --width <px>         Image width. Default: 1200 at 16:9, adjusted for scene aspect
       --height <px>        Image height. Default: width / aspect
-      --aspect <ratio>     Aspect ratio as a number or W:H. Default: 16:9
+      --aspect <ratio>     Aspect ratio as a number or W:H. Default: scene default or 16:9
       --depth <n>          Maximum path depth. Default: 50
       --scene-seed <n>     Seed used while building randomized scenes. Default: 1
       --rng-seed <n>       Base seed used for tile sampling. Default: 100
@@ -158,10 +168,49 @@ local function normalizeOutputBase(
 	return base, outputFormat
 end
 
-function renderOptions.parse(args: { string }, defaultThreads: number): ParseResult
+local function getSceneAspectRatio(sceneName: string, metadataByScene: MetadataByScene?): number?
+	if not metadataByScene then
+		return nil
+	end
+
+	local sceneMetadata = metadataByScene[sceneName]
+	if not sceneMetadata then
+		return nil
+	end
+
+	return sceneMetadata.aspectRatio
+end
+
+local function resolveTargetAspectRatio(
+	requestedAspectRatio: number?,
+	sceneName: string,
+	metadataByScene: MetadataByScene?
+): number
+	if requestedAspectRatio then
+		return requestedAspectRatio
+	end
+
+	local sceneAspectRatio = getSceneAspectRatio(sceneName, metadataByScene)
+	if sceneAspectRatio then
+		return sceneAspectRatio
+	end
+
+	return DEFAULT_ASPECT_RATIO
+end
+
+local function defaultWidthForAspectRatio(aspectRatio: number): number
+	local width = math.sqrt(DEFAULT_PIXEL_COUNT * aspectRatio)
+	local pixelWidth = math.floor(width)
+	local clampedWidth = math.max(1, pixelWidth)
+
+	return clampedWidth
+end
+
+function renderOptions.parse(args: { string }, defaultThreads: number, metadataByScene: MetadataByScene?): ParseResult
 	local width = DEFAULT_WIDTH
+	local widthExplicit = false
 	local height: number? = nil
-	local aspectRatio = DEFAULT_ASPECT_RATIO
+	local requestedAspectRatio: number? = nil
 	local aspectExplicit = false
 	local samples = DEFAULT_SAMPLES
 	local depth = DEFAULT_DEPTH
@@ -190,12 +239,13 @@ function renderOptions.parse(args: { string }, defaultThreads: number): ParseRes
 			index += 1
 		elseif arg == "--width" then
 			width = parsePositiveInteger(requireValue(args, index, arg), arg)
+			widthExplicit = true
 			index += 1
 		elseif arg == "--height" then
 			height = parsePositiveInteger(requireValue(args, index, arg), arg)
 			index += 1
 		elseif arg == "--aspect" then
-			aspectRatio = parseAspectRatio(requireValue(args, index, arg))
+			requestedAspectRatio = parseAspectRatio(requireValue(args, index, arg))
 			aspectExplicit = true
 			index += 1
 		elseif arg == "--depth" then
@@ -239,13 +289,25 @@ function renderOptions.parse(args: { string }, defaultThreads: number): ParseRes
 		error("use either --height or --aspect, not both")
 	end
 
-	local resolvedHeight = height or math.max(1, math.floor(width / aspectRatio))
-	local resolvedAspectRatio = width / resolvedHeight
+	local targetAspectRatio = resolveTargetAspectRatio(requestedAspectRatio, scene, metadataByScene)
+	local resolvedWidth = width
+	if not widthExplicit and not height then
+		resolvedWidth = defaultWidthForAspectRatio(targetAspectRatio)
+	end
+
+	local resolvedHeight: number
+	if height then
+		resolvedHeight = height
+	else
+		resolvedHeight = math.max(1, math.floor(resolvedWidth / targetAspectRatio))
+	end
+
+	local resolvedAspectRatio = resolvedWidth / resolvedHeight
 
 	return {
 		help = false,
 		options = {
-			width = width,
+			width = resolvedWidth,
 			height = resolvedHeight,
 			samples = samples,
 			depth = depth,

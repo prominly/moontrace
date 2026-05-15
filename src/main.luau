@@ -10,6 +10,7 @@ local fs = require("@std/fs")
 local ppm = require("./render/ppm")
 local pfm = require("./render/pfm")
 local denoise = require("./render/denoise")
+local paths = require("./cli/paths")
 local renderOptions = require("./cli/render_options")
 local sceneMetadata = require("./scenes/metadata")
 
@@ -22,27 +23,6 @@ local TEXTURE_PATHS = {
 
 type OutputFormat = "ppm" | "pfm"
 
-local function parentDirectory(path: string): string?
-	for i = #path, 1, -1 do
-		if string.sub(path, i, i) == "/" then
-			if i == 1 then
-				return "/"
-			end
-
-			return string.sub(path, 1, i - 1)
-		end
-	end
-
-	return nil
-end
-
-local function ensureParentDirectory(path: string)
-	local parent = parentDirectory(path)
-	if parent and parent ~= "/" then
-		fs.createDirectory(parent, { makeParents = true })
-	end
-end
-
 local function writeColorImage(
 	pathBase: string,
 	format: OutputFormat,
@@ -52,18 +32,18 @@ local function writeColorImage(
 )
 	if format == "pfm" then
 		local path = pathBase .. ".pfm"
-		ensureParentDirectory(path)
+		paths.ensureParentDirectory(path)
 		pfm.writeFile(path, width, height, pixels)
 	else
 		local path = pathBase .. ".ppm"
-		ensureParentDirectory(path)
+		paths.ensureParentDirectory(path)
 		ppm.writeFile(path, width, height, pixels)
 	end
 end
 
 local function writePreviewImage(pathBase: string, width: number, height: number, pixels: { vector })
 	local path = pathBase .. ".ppm"
-	ensureParentDirectory(path)
+	paths.ensureParentDirectory(path)
 	ppm.writeFile(path, width, height, pixels)
 end
 
@@ -117,14 +97,16 @@ print(settingsBody)
 -- spawn
 local tSpawnStart = os.clock()
 
+local projectRoot = paths.projectRootFromScript(process.args[1])
 local loaded: { { path: string, data: string } } = {}
 for _, path in TEXTURE_PATHS do
-	if fs.exists(path) then
-		local h = fs.open(path, "r")
+	local sourcePath = paths.resolveProjectPath(projectRoot, path)
+	if fs.exists(sourcePath) then
+		local h = fs.open(sourcePath, "r")
 		loaded[#loaded + 1] = { path = path, data = fs.read(h) }
 		fs.close(h)
 	else
-		print("[WARNING]: " .. path .. " not found; falling back to solid color")
+		print("[WARNING]: " .. sourcePath .. " not found; falling back to solid color")
 	end
 end
 

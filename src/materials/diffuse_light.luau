@@ -36,8 +36,12 @@ function DiffuseLight.emitted(self: DiffuseLight, rec: hittable.HitRecord): vect
 	return self.texture:value(rec.u, rec.v, rec.p)
 end
 
-function DiffuseLight.surfaceAlbedo(_self: DiffuseLight, _rec: hittable.HitRecord): vector
-	return vector.zero
+function DiffuseLight.surfaceAlbedo(self: DiffuseLight, rec: hittable.HitRecord): vector
+	if not rec.frontFace then
+		return vector.zero
+	end
+
+	return self.texture:value(rec.u, rec.v, rec.p)
 end
 
 return DiffuseLight

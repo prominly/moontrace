@@ -289,7 +289,12 @@ function integrator.firstHitGBuffer(r: Ray.Ray, world: hittable.Hittable): (vect
 		end
 
 		local material = rec.material
-		lastNormal = rec.normal
+		if material.surfaceNormal then
+			lastNormal = (material :: any):surfaceNormal(rec)
+		else
+			lastNormal = rec.normal
+		end
+
 		lastAlbedo = vector.one
 		if material.surfaceAlbedo then
 			lastAlbedo = (material :: any):surfaceAlbedo(rec)

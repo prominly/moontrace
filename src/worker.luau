@@ -78,27 +78,19 @@ function worker.renderTile(args: {
 	for j = args.yStart, args.yEnd - 1 do
 		for i = 0, args.width - 1 do
 			local pixelColor = vector.zero
+			local pixelAlbedo = vector.zero
+			local pixelNormal = vector.zero
 
-			local firstRay = camera:getRay(i, j, 1)
-			local firstAlbedo = vector.zero
-			local firstNormal = vector.zero
-			if args.aovs then
-				firstAlbedo, firstNormal = integrator.firstHitGBuffer(firstRay, bvh)
-			end
+			for sampleIndex = 1, args.samples do
+				local ray = camera:getRay(i, j, sampleIndex)
+				if args.aovs then
+					local sampleAlbedo, sampleNormal = integrator.firstHitGBuffer(ray, bvh)
+					pixelAlbedo += sampleAlbedo
+					pixelNormal += sampleNormal
+				end
 
-			pixelColor += integrator.rayColor(
-				firstRay,
-				args.depth,
-				bvh,
-				sky,
-				scene.lights,
-				scene.samplers,
-				sceneEnvironment
-			)
-
-			for sampleIndex = 2, args.samples do
 				pixelColor += integrator.rayColor(
-					camera:getRay(i, j, sampleIndex),
+					ray,
 					args.depth,
 					bvh,
 					sky,
@@ -109,6 +101,9 @@ function worker.renderTile(args: {
 			end
 
 			pixelColor *= scale
+			pixelAlbedo *= scale
+			pixelNormal *= scale
+
 			buffer.writef32(colorBuf, offset, pixelColor.x)
 			buffer.writef32(colorBuf, offset + 4, pixelColor.y)
 			buffer.writef32(colorBuf, offset + 8, pixelColor.z)
@@ -117,12 +112,12 @@ function worker.renderTile(args: {
 				local ab = albedoBuf :: buffer
 				local nb = normalBuf :: buffer
 
-				buffer.writef32(ab, offset, firstAlbedo.x)
-				buffer.writef32(ab, offset + 4, firstAlbedo.y)
-				buffer.writef32(ab, offset + 8, firstAlbedo.z)
-				buffer.writef32(nb, offset, firstNormal.x)
-				buffer.writef32(nb, offset + 4, firstNormal.y)
-				buffer.writef32(nb, offset + 8, firstNormal.z)
+				buffer.writef32(ab, offset, pixelAlbedo.x)
+				buffer.writef32(ab, offset + 4, pixelAlbedo.y)
+				buffer.writef32(ab, offset + 8, pixelAlbedo.z)
+				buffer.writef32(nb, offset, pixelNormal.x)
+				buffer.writef32(nb, offset + 4, pixelNormal.y)
+				buffer.writef32(nb, offset + 8, pixelNormal.z)
 			end
 
 			offset += 12

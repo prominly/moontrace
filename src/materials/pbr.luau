@@ -398,6 +398,10 @@ function PBR.surfaceAlbedo(self: PBR, rec: hittable.HitRecord): vector
 	return cachedSurfaceAt(self, rec).albedo
 end
 
+function PBR.surfaceNormal(self: PBR, rec: hittable.HitRecord): vector
+	return cachedSurfaceAt(self, rec).normal
+end
+
 function PBR.specularBounce(self: PBR, rIn: Ray.Ray, rec: hittable.HitRecord): Ray.Ray?
 	local surface = cachedSurfaceAt(self, rec)
 	if surface.metallic < 0.9 or surface.roughness > 0.05 then

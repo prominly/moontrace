@@ -12,6 +12,7 @@ export type Material = {
 	evalDirect: ((any, rIn: Ray.Ray, rec: HitRecord, wi: Vec3.Vec3) -> vector)?,
 	emitted: ((any, rec: HitRecord) -> vector)?,
 	surfaceAlbedo: ((any, rec: HitRecord) -> vector)?,
+	surfaceNormal: ((any, rec: HitRecord) -> vector)?,
 	specularBounce: ((any, rIn: Ray.Ray, rec: HitRecord) -> Ray.Ray?)?,
 }
 

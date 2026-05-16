@@ -210,8 +210,8 @@ if options.preview then
 	writePreviewImage(options.outputBase .. "_preview", options.width, options.height, color)
 end
 if options.aovs then
-	writeColorImage(options.outputBase .. "_albedo", "pfm", options.width, options.height, albedo)
-	writeColorImage(options.outputBase .. "_normal", "pfm", options.width, options.height, normal)
+	writeColorImage(paths.siblingPath(options.outputBase, "albedo"), "pfm", options.width, options.height, albedo)
+	writeColorImage(paths.siblingPath(options.outputBase, "normal"), "pfm", options.width, options.height, normal)
 end
 local tWrite = os.clock() - tWriteStart
 

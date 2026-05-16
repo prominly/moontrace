@@ -40,6 +40,15 @@ function paths.join(root: string, path: string): string
 	return root .. "/" .. path
 end
 
+function paths.siblingPath(path: string, name: string): string
+	local parent = paths.parentDirectory(path)
+	if parent then
+		return paths.join(parent, name)
+	end
+
+	return name
+end
+
 function paths.projectRootFromScript(scriptPath: string?): string
 	if not scriptPath then
 		return "."

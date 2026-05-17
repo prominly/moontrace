@@ -38,6 +38,8 @@ function worker.renderTile(args: {
 	aspectRatio: number,
 	scene: string,
 	aovs: boolean,
+	clampDirect: number,
+	clampIndirect: number,
 }): TileResult
 	local builder = scenes[args.scene]
 	if not builder then
@@ -68,6 +70,14 @@ function worker.renderTile(args: {
 	local sceneEnvironment = scene.environment
 	local scale = camera.pixelSamplesScale
 
+	local fireflyOptions: integrator.FireflyOptions? = nil
+	if args.clampDirect > 0 or args.clampIndirect > 0 then
+		fireflyOptions = {
+			clampDirect = args.clampDirect,
+			clampIndirect = args.clampIndirect,
+		}
+	end
+
 	local pixelCount = (args.yEnd - args.yStart) * args.width
 	local byteSize = pixelCount * 12
 	local colorBuf = buffer.create(byteSize)
@@ -96,7 +106,8 @@ function worker.renderTile(args: {
 					sky,
 					scene.lights,
 					scene.samplers,
-					sceneEnvironment
+					sceneEnvironment,
+					fireflyOptions
 				)
 			end
 

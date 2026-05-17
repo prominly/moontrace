@@ -51,10 +51,6 @@ local function maxComponent(v: vector): number
 	return math.max(v.x, v.y, v.z)
 end
 
-local function luminance(v: vector): number
-	return 0.2126 * v.x + 0.7152 * v.y + 0.0722 * v.z
-end
-
 local function safeUnit(v: vector): vector?
 	if Vec3.lengthSquared(v) <= EPS then
 		return nil
@@ -97,7 +93,7 @@ local function f0For(albedo: vector, metallic: number): vector
 end
 
 local function specularChance(albedo: vector, metallic: number): number
-	return math.clamp(0.5 * metallic + luminance(f0For(albedo, metallic)), 0.1, 0.9)
+	return math.clamp(0.5 * metallic + Vec3.luminance(f0For(albedo, metallic)), 0.1, 0.9)
 end
 
 local function sampleGgxNormal(normal: vector, alpha: number): vector
@@ -143,7 +139,7 @@ end
 local function heightValue(texture: textureTypes.Texture, u: number, v: number, p: vector): number
 	local h = texture:value(u, v, p)
 
-	return 0.2126 * h.x + 0.7152 * h.y + 0.0722 * h.z
+	return Vec3.luminance(h)
 end
 
 local function normalFromMap(texture: textureTypes.Texture?, rec: hittable.HitRecord): vector

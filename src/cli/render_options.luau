@@ -42,6 +42,8 @@ export type RenderOptions = {
 	denoise: boolean,
 	aovs: boolean,
 	preview: boolean,
+	clampDirect: number,
+	clampIndirect: number,
 }
 
 export type ParseResult = {
@@ -63,6 +65,8 @@ Options:
       --depth <n>          Maximum path depth. Default: from scene metadata, otherwise 50
       --scene-seed <n>     Seed used while building randomized scenes. Default: from scene metadata, otherwise 1
       --rng-seed <n>       Base seed used for tile sampling. Default: 100
+      --clamp-direct <y>   Clamp direct contribution luminance. Default: 0 (disabled)
+      --clamp-indirect <y> Clamp indirect contribution luminance. Default: 0 (disabled)
       --threads <n>        Worker VM count. Default: host thread count
   -o, --out <path>         Output base path. Default: image
       --output <path>      Alias for --out
@@ -103,6 +107,15 @@ local function parsePositiveInteger(value: string?, name: string): number
 	local parsed = parseInteger(value, name)
 	if parsed < 1 then
 		error("expected " .. name .. " to be at least 1, got " .. tostring(value))
+	end
+
+	return parsed
+end
+
+local function parseNonNegativeNumber(value: string?, name: string): number
+	local parsed = tonumber(value)
+	if not parsed or parsed ~= parsed or parsed < 0 or parsed == math.huge then
+		error("expected " .. name .. " to be a finite non-negative number, got " .. tostring(value))
 	end
 
 	return parsed
@@ -222,6 +235,8 @@ function renderOptions.parse(args: { string }, defaultThreads: number, metadataB
 	local formatExplicit = false
 	local denoiseEnabled = false
 	local aovsEnabled = false
+	local clampDirect = 0
+	local clampIndirect = 0
 	local positionalSamples = false
 
 	local index = 2
@@ -257,6 +272,12 @@ function renderOptions.parse(args: { string }, defaultThreads: number, metadataB
 			index += 1
 		elseif arg == "--rng-seed" then
 			rngSeed = parseInteger(requireValue(args, index, arg), arg)
+			index += 1
+		elseif arg == "--clamp-direct" then
+			clampDirect = parseNonNegativeNumber(requireValue(args, index, arg), arg)
+			index += 1
+		elseif arg == "--clamp-indirect" then
+			clampIndirect = parseNonNegativeNumber(requireValue(args, index, arg), arg)
 			index += 1
 		elseif arg == "--threads" then
 			threads = parsePositiveInteger(requireValue(args, index, arg), arg)
@@ -332,6 +353,8 @@ function renderOptions.parse(args: { string }, defaultThreads: number, metadataB
 			denoise = denoiseEnabled,
 			aovs = aovsEnabled,
 			preview = outputFormat == "pfm",
+			clampDirect = clampDirect,
+			clampIndirect = clampIndirect,
 		},
 	}
 end

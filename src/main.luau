@@ -66,17 +66,19 @@ local collectAovs = options.aovs or options.denoise
 
 local settingsBody = string.format(
 	[[settings:
-  scene:   %s
-  size:    %dx%d
-  aspect:  %.3f
-  spp:     %d
-  depth:   %d
-  threads: %d
-  format:  %s
-  out:     %s
-  preview: %s
-  aovs:    %s
-  denoise: %s
+  scene:          %s
+  size:           %dx%d
+  aspect:         %.3f
+  spp:            %d
+  depth:          %d
+  threads:        %d
+  format:         %s
+  out:            %s
+  preview:        %s
+  aovs:           %s
+  denoise:        %s
+  clamp_direct:   %.3f
+  clamp_indirect: %.3f
   ]],
 	options.scene,
 	options.width,
@@ -89,7 +91,9 @@ local settingsBody = string.format(
 	options.outputBase,
 	tostring(options.preview),
 	tostring(options.aovs),
-	tostring(options.denoise)
+	tostring(options.denoise),
+	options.clampDirect,
+	options.clampIndirect
 )
 
 print(settingsBody)
@@ -151,6 +155,8 @@ for w = 1, options.threads do
 				aspectRatio = options.aspectRatio,
 				scene = options.scene,
 				aovs = collectAovs,
+				clampDirect = options.clampDirect,
+				clampIndirect = options.clampIndirect,
 			})
 			tilesDone += 1
 		end

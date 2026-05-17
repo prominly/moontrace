@@ -3,6 +3,7 @@
 --!native
 
 local Ray = require("../core/ray")
+local Vec3 = require("../math/vec3")
 local hittable = require("../core/hittable")
 local lights = require("../lights")
 local backgroundMod = require("./background")
@@ -11,8 +12,26 @@ local spectrum = require("./spectrum")
 
 local integrator = {}
 
+export type FireflyOptions = {
+	clampDirect: number,
+	clampIndirect: number,
+}
+
 local function maxComponent(v: vector): number
 	return math.max(v.x, v.y, v.z)
+end
+
+local function clampLuminance(v: vector, limit: number): (vector, boolean)
+	if limit <= 0 then
+		return v, false
+	end
+
+	local y = Vec3.luminance(v)
+	if y <= limit or y <= 0 then
+		return v, false
+	end
+
+	return v * (limit / y), true
 end
 
 local function powerHeuristic(pdfA: number, pdfB: number): number
@@ -100,7 +119,8 @@ local function addDirectLighting(
 	world: hittable.Hittable,
 	sceneLights: { lights.Light }?,
 	samplers: hittable.Hittable?,
-	sceneEnvironment: environmentMod.Environment?
+	sceneEnvironment: environmentMod.Environment?,
+	clampDirect: number
 ): vector
 	if not rec.material.evalDirect or not rec.material.probability or maxComponent(attenuation) <= 0.01 then
 		return vector.zero
@@ -134,7 +154,12 @@ local function addDirectLighting(
 			end
 
 			local f = (rec.material :: any):evalDirect(ray, rec, sample.dir)
-			accum += attenuation * f * sample.emitted * weight / sample.probability
+			local contribution = attenuation * f * sample.emitted * weight / sample.probability
+			if clampDirect > 0 then
+				contribution = clampLuminance(contribution, clampDirect)
+			end
+
+			accum += contribution
 		end
 	end
 
@@ -153,7 +178,12 @@ local function addDirectLighting(
 				if brdfDensity > 0 and maxComponent(emitted) > 0 then
 					local weight = powerHeuristic(pdf, brdfDensity)
 					local f = (rec.material :: any):evalDirect(ray, rec, dir)
-					accum += attenuation * f * emitted * weight / pdf
+					local contribution = attenuation * f * emitted * weight / pdf
+					if clampDirect > 0 then
+						contribution = clampLuminance(contribution, clampDirect)
+					end
+
+					accum += contribution
 				end
 			end
 		end
@@ -171,7 +201,12 @@ local function addDirectLighting(
 				if brdfDensity > 0 then
 					local weight = powerHeuristic(sample.probability, brdfDensity)
 					local f = (rec.material :: any):evalDirect(ray, rec, sample.dir)
-					accum += attenuation * f * sample.emitted * weight / sample.probability
+					local contribution = attenuation * f * sample.emitted * weight / sample.probability
+					if clampDirect > 0 then
+						contribution = clampLuminance(contribution, clampDirect)
+					end
+
+					accum += contribution
 				end
 			end
 		end
@@ -187,13 +222,21 @@ function integrator.rayColor(
 	background: backgroundMod.Background,
 	sceneLights: { lights.Light }?,
 	samplers: hittable.Hittable?,
-	sceneEnvironment: environmentMod.Environment?
+	sceneEnvironment: environmentMod.Environment?,
+	fireflyOptions: FireflyOptions?
 ): vector
 	local accum = vector.zero
 	local attenuation = vector.one
 	local ray = r
 	local previousBsdfPdf = 0
 	local previousLightPdf = 0
+	local clampDirect = 0
+	local clampIndirect = 0
+
+	if fireflyOptions then
+		clampDirect = fireflyOptions.clampDirect
+		clampIndirect = fireflyOptions.clampIndirect
+	end
 
 	if r.wavelength > 0 then
 		attenuation = spectrum.wavelengthToRgb(r.wavelength)
@@ -213,7 +256,12 @@ function integrator.rayColor(
 		if not rec then
 			if maxComponent(analyticEmission) > 0 then
 				local weight = powerHeuristic(previousBsdfPdf, analyticPdf)
-				accum += attenuation * analyticEmission * weight
+				local contribution = attenuation * analyticEmission * weight
+				if clampIndirect > 0 then
+					contribution = clampLuminance(contribution, clampIndirect)
+				end
+
+				accum += contribution
 
 				return accum
 			end
@@ -225,7 +273,12 @@ function integrator.rayColor(
 				weight = powerHeuristic(previousBsdfPdf, previousLightPdf)
 			end
 
-			return accum + attenuation * emitted * weight
+			local contribution = attenuation * emitted * weight
+			if clampIndirect > 0 then
+				contribution = clampLuminance(contribution, clampIndirect)
+			end
+
+			return accum + contribution
 		end
 
 		if rec.material.emitted then
@@ -236,10 +289,15 @@ function integrator.rayColor(
 				weight = powerHeuristic(previousBsdfPdf, previousLightPdf)
 			end
 
-			accum += attenuation * emitted * weight
+			local contribution = attenuation * emitted * weight
+			if clampIndirect > 0 then
+				contribution = clampLuminance(contribution, clampIndirect)
+			end
+
+			accum += contribution
 		end
 
-		accum += addDirectLighting(ray, rec, attenuation, world, sceneLights, samplers, sceneEnvironment)
+		accum += addDirectLighting(ray, rec, attenuation, world, sceneLights, samplers, sceneEnvironment, clampDirect)
 
 		local att, scattered = rec.material:scatter(ray, rec)
 

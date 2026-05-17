@@ -23,6 +23,10 @@ function Vec3.nearZero(v: vector): boolean
 	return math.abs(v.x) < s and math.abs(v.y) < s and math.abs(v.z) < s
 end
 
+function Vec3.luminance(v: vector): number
+	return 0.2126 * v.x + 0.7152 * v.y + 0.0722 * v.z
+end
+
 function Vec3.reflect(v: vector, n: vector): vector
 	return v - 2 * vector.dot(v, n) * n
 end

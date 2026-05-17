@@ -6,6 +6,7 @@ local Camera = require("./render/camera")
 local BVH = require("./core/bvh")
 local hittable = require("./core/hittable")
 local integrator = require("./render/integrator")
+local renderStats = require("./render/stats")
 local background = require("./render/background")
 local scenes = require("./scenes")
 local types = require("./scenes/types")
@@ -21,6 +22,7 @@ export type TileResult = {
 	color: string,
 	albedo: string,
 	normal: string,
+	stats: renderStats.Stats,
 }
 
 function worker.preloadTexture(path: string, data: string)
@@ -69,8 +71,14 @@ function worker.renderTile(args: {
 	local sky = scene.sky or background.gradientSky
 	local sceneEnvironment = scene.environment
 	local scale = camera.pixelSamplesScale
+	local stats = renderStats.new()
+	local fireflyContext: renderStats.Context = {
+		pixelX = 0,
+		pixelY = 0,
+		sampleIndex = 0,
+	}
 
-	local fireflyOptions: integrator.FireflyOptions? = nil
+	local fireflyOptions: renderStats.Options? = nil
 	if args.clampDirect > 0 or args.clampIndirect > 0 then
 		fireflyOptions = {
 			clampDirect = args.clampDirect,
@@ -93,13 +101,17 @@ function worker.renderTile(args: {
 
 			for sampleIndex = 1, args.samples do
 				local ray = camera:getRay(i, j, sampleIndex)
+				fireflyContext.pixelX = i
+				fireflyContext.pixelY = j
+				fireflyContext.sampleIndex = sampleIndex
+
 				if args.aovs then
 					local sampleAlbedo, sampleNormal = integrator.firstHitGBuffer(ray, bvh)
 					pixelAlbedo += sampleAlbedo
 					pixelNormal += sampleNormal
 				end
 
-				pixelColor += integrator.rayColor(
+				local sampleColor = integrator.rayColor(
 					ray,
 					args.depth,
 					bvh,
@@ -107,8 +119,12 @@ function worker.renderTile(args: {
 					scene.lights,
 					scene.samplers,
 					sceneEnvironment,
-					fireflyOptions
+					fireflyOptions,
+					stats,
+					fireflyContext
 				)
+				renderStats.recordFinalSample(stats, sampleColor, i, j, sampleIndex)
+				pixelColor += sampleColor
 			end
 
 			pixelColor *= scale
@@ -139,6 +155,7 @@ function worker.renderTile(args: {
 		color = buffer.tostring(colorBuf),
 		albedo = if albedoBuf then buffer.tostring(albedoBuf) else "",
 		normal = if normalBuf then buffer.tostring(normalBuf) else "",
+		stats = stats,
 	}
 end
 

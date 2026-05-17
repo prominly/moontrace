@@ -10,6 +10,7 @@ local fs = require("@std/fs")
 local ppm = require("./render/ppm")
 local pfm = require("./render/pfm")
 local denoise = require("./render/denoise")
+local renderStats = require("./render/stats")
 local paths = require("./cli/paths")
 local renderOptions = require("./cli/render_options")
 local sceneMetadata = require("./scenes/metadata")
@@ -66,19 +67,19 @@ local collectAovs = options.aovs or options.denoise
 
 local settingsBody = string.format(
 	[[settings:
-  scene:          %s
-  size:           %dx%d
-  aspect:         %.3f
-  spp:            %d
-  depth:          %d
-  threads:        %d
-  format:         %s
-  out:            %s
-  preview:        %s
-  aovs:           %s
-  denoise:        %s
-  clamp_direct:   %.3f
-  clamp_indirect: %.3f
+  scene:            %s
+  size:             %dx%d
+  aspect:           %.3f
+  spp:              %d
+  depth:            %d
+  threads:          %d
+  format:           %s
+  out:              %s
+  preview:          %s
+  aovs:             %s
+  denoise:          %s
+  clamp_direct:     %.3f
+  clamp_indirect:   %.3f
   ]],
 	options.scene,
 	options.width,
@@ -174,10 +175,13 @@ local pixelCount = options.width * options.height
 local color = table.create(pixelCount) :: { vector }
 local albedo = (if collectAovs then table.create(pixelCount) else {}) :: { vector }
 local normal = (if collectAovs then table.create(pixelCount) else {}) :: { vector }
+local qualityStats = renderStats.new()
 
 local cursor = 1
 for t = 1, tileCount do
 	local r = results[t]
+	renderStats.merge(qualityStats, r.stats)
+
 	local offset = 0
 	local cb = buffer.fromstring(r.color)
 	local ab: buffer? = if collectAovs then buffer.fromstring(r.albedo) else nil
@@ -208,6 +212,48 @@ for t = 1, tileCount do
 		cursor += 1
 	end
 end
+
+local statsBody = string.format(
+	[[quality:
+  clamp_direct:     %.3f
+  clamp_indirect:   %.3f
+  max_direct_y:     %s
+  max_indirect_y:   %s
+  max_sample_y:     %s
+  direct_clamped:   %d / %d (%.4f%%)
+  indirect_clamped: %d / %d (%.4f%%)
+  ]],
+	options.clampDirect,
+	options.clampIndirect,
+	renderStats.formatContributionMax(
+		qualityStats.maxDirectLuminance,
+		qualityStats.maxDirectX,
+		qualityStats.maxDirectY,
+		qualityStats.maxDirectSample,
+		qualityStats.maxDirectDepth
+	),
+	renderStats.formatContributionMax(
+		qualityStats.maxIndirectLuminance,
+		qualityStats.maxIndirectX,
+		qualityStats.maxIndirectY,
+		qualityStats.maxIndirectSample,
+		qualityStats.maxIndirectDepth
+	),
+	renderStats.formatSampleMax(
+		qualityStats.maxSampleLuminance,
+		qualityStats.maxSampleX,
+		qualityStats.maxSampleY,
+		qualityStats.maxSampleSample
+	),
+	qualityStats.directClamped,
+	qualityStats.directTests,
+	renderStats.percent(qualityStats.directClamped, qualityStats.directTests),
+	qualityStats.indirectClamped,
+	qualityStats.indirectTests,
+	renderStats.percent(qualityStats.indirectClamped, qualityStats.indirectTests)
+)
+
+print(statsBody)
 
 -- write
 local tWriteStart = os.clock()
